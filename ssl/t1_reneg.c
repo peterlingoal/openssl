@@ -1,4 +1,4 @@
-/* crypto/rand/rand_nw.c */
+/* ssl/t1_reneg.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2000 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2009 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,76 +108,185 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+#include <stdio.h>
+#include <openssl/objects.h>
+#include "ssl_locl.h"
 
-#include "cryptlib.h"
-#include <openssl/rand.h>
-#include "rand_lcl.h"
+/* Add the client's renegotiation binding */
+int ssl_add_clienthello_renegotiate_ext(SSL *s, unsigned char *p, int *len,
+					int maxlen)
+    {
+    if(p)
+        {
+	if((s->s3->previous_client_finished_len+1) > maxlen)
+            {
+            SSLerr(SSL_F_SSL_ADD_CLIENTHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATE_EXT_TOO_LONG);
+            return 0;
+            }
+            
+        /* Length byte */
+	*p = s->s3->previous_client_finished_len;
+        p++;
 
-#if defined (OPENSSL_SYS_NETWARE)
+        memcpy(p, s->s3->previous_client_finished,
+	       s->s3->previous_client_finished_len);
+#ifdef OPENSSL_RI_DEBUG
+    fprintf(stderr, "%s RI extension sent by client\n",
+		s->s3->previous_client_finished_len ? "Non-empty" : "Empty");
+#endif
+        }
+    
+    *len=s->s3->previous_client_finished_len + 1;
 
-#if defined(NETWARE_LIBC)
-#include <nks/thread.h>
-#else
-#include <nwthread.h>
+ 
+    return 1;
+    }
+
+/* Parse the client's renegotiation binding and abort if it's not
+   right */
+int ssl_parse_clienthello_renegotiate_ext(SSL *s, unsigned char *d, int len,
+					  int *al)
+    {
+    int ilen;
+
+    /* Parse the length byte */
+    if(len < 1)
+        {
+        SSLerr(SSL_F_SSL_PARSE_CLIENTHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_ENCODING_ERR);
+        *al=SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+        }
+    ilen = *d;
+    d++;
+
+    /* Consistency check */
+    if((ilen+1) != len)
+        {
+        SSLerr(SSL_F_SSL_PARSE_CLIENTHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_ENCODING_ERR);
+        *al=SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+        }
+
+    /* Check that the extension matches */
+    if(ilen != s->s3->previous_client_finished_len)
+        {
+        SSLerr(SSL_F_SSL_PARSE_CLIENTHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_MISMATCH);
+        *al=SSL_AD_HANDSHAKE_FAILURE;
+        return 0;
+        }
+    
+    if(memcmp(d, s->s3->previous_client_finished,
+	      s->s3->previous_client_finished_len))
+        {
+        SSLerr(SSL_F_SSL_PARSE_CLIENTHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_MISMATCH);
+        *al=SSL_AD_HANDSHAKE_FAILURE;
+        return 0;
+        }
+#ifdef OPENSSL_RI_DEBUG
+    fprintf(stderr, "%s RI extension received by server\n",
+				ilen ? "Non-empty" : "Empty");
 #endif
 
-extern int GetProcessSwitchCount(void);
-#if !defined(NETWARE_LIBC) || (CURRENT_NDK_THRESHOLD < 509220000)
-extern void *RunningProcess; /* declare here same as found in newer NDKs */
-extern unsigned long GetSuperHighResolutionTimer(void);
+    s->s3->send_connection_binding=1;
+
+    return 1;
+    }
+
+/* Add the server's renegotiation binding */
+int ssl_add_serverhello_renegotiate_ext(SSL *s, unsigned char *p, int *len,
+					int maxlen)
+    {
+    if(p)
+        {
+        if((s->s3->previous_client_finished_len +
+            s->s3->previous_server_finished_len + 1) > maxlen)
+            {
+            SSLerr(SSL_F_SSL_ADD_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATE_EXT_TOO_LONG);
+            return 0;
+            }
+        
+        /* Length byte */
+        *p = s->s3->previous_client_finished_len + s->s3->previous_server_finished_len;
+        p++;
+
+        memcpy(p, s->s3->previous_client_finished,
+	       s->s3->previous_client_finished_len);
+        p += s->s3->previous_client_finished_len;
+
+        memcpy(p, s->s3->previous_server_finished,
+	       s->s3->previous_server_finished_len);
+#ifdef OPENSSL_RI_DEBUG
+    fprintf(stderr, "%s RI extension sent by server\n",
+    		s->s3->previous_client_finished_len ? "Non-empty" : "Empty");
 #endif
+        }
+    
+    *len=s->s3->previous_client_finished_len
+	+ s->s3->previous_server_finished_len + 1;
+    
+    return 1;
+    }
 
-   /* the FAQ indicates we need to provide at least 20 bytes (160 bits) of seed
-   */
-int RAND_poll(void)
-{
-   unsigned long l;
-   unsigned long tsc;
-   int i; 
+/* Parse the server's renegotiation binding and abort if it's not
+   right */
+int ssl_parse_serverhello_renegotiate_ext(SSL *s, unsigned char *d, int len,
+					  int *al)
+    {
+    int expected_len=s->s3->previous_client_finished_len
+	+ s->s3->previous_server_finished_len;
+    int ilen;
 
-      /* There are several options to gather miscellaneous data
-       * but for now we will loop checking the time stamp counter (rdtsc) and
-       * the SuperHighResolutionTimer.  Each iteration will collect 8 bytes
-       * of data but it is treated as only 1 byte of entropy.  The call to
-       * ThreadSwitchWithDelay() will introduce additional variability into
-       * the data returned by rdtsc.
-       *
-       * Applications can agument the seed material by adding additional
-       * stuff with RAND_add() and should probably do so.
-      */
-   l = GetProcessSwitchCount();
-   RAND_add(&l,sizeof(l),1);
-   
-   /* need to cast the void* to unsigned long here */
-   l = (unsigned long)RunningProcess;
-   RAND_add(&l,sizeof(l),1);
+    /* Check for logic errors */
+    OPENSSL_assert(!expected_len || s->s3->previous_client_finished_len);
+    OPENSSL_assert(!expected_len || s->s3->previous_server_finished_len);
+    
+    /* Parse the length byte */
+    if(len < 1)
+        {
+        SSLerr(SSL_F_SSL_PARSE_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_ENCODING_ERR);
+        *al=SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+        }
+    ilen = *d;
+    d++;
 
-   for( i=2; i<ENTROPY_NEEDED; i++)
-   {
-#ifdef __MWERKS__
-      asm 
-      {
-         rdtsc
-         mov tsc, eax        
-      }
-#elif defined(__GNUC__) && __GNUC__>=2 && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_NO_INLINE_ASM)
-      asm volatile("rdtsc":"=a"(tsc)::"edx");
+    /* Consistency check */
+    if(ilen+1 != len)
+        {
+        SSLerr(SSL_F_SSL_PARSE_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_ENCODING_ERR);
+        *al=SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+        }
+    
+    /* Check that the extension matches */
+    if(ilen != expected_len)
+        {
+        SSLerr(SSL_F_SSL_PARSE_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_MISMATCH);
+        *al=SSL_AD_HANDSHAKE_FAILURE;
+        return 0;
+        }
+
+    if(memcmp(d, s->s3->previous_client_finished,
+	      s->s3->previous_client_finished_len))
+        {
+        SSLerr(SSL_F_SSL_PARSE_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_MISMATCH);
+        *al=SSL_AD_HANDSHAKE_FAILURE;
+        return 0;
+        }
+    d += s->s3->previous_client_finished_len;
+
+    if(memcmp(d, s->s3->previous_server_finished,
+	      s->s3->previous_server_finished_len))
+        {
+        SSLerr(SSL_F_SSL_PARSE_SERVERHELLO_RENEGOTIATE_EXT,SSL_R_RENEGOTIATION_MISMATCH);
+        *al=SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+        }
+#ifdef OPENSSL_RI_DEBUG
+    fprintf(stderr, "%s RI extension received by client\n",
+				ilen ? "Non-empty" : "Empty");
 #endif
+    s->s3->send_connection_binding=1;
 
-      RAND_add(&tsc, sizeof(tsc), 1);
-
-      l = GetSuperHighResolutionTimer();
-      RAND_add(&l, sizeof(l), 0);
-
-# if defined(NETWARE_LIBC)
-      NXThreadYield();
-# else /* NETWARE_CLIB */
-      ThreadSwitchWithDelay();
-# endif
-   }
-
-   return 1;
-}
-
-#endif 
-
+    return 1;
+    }
