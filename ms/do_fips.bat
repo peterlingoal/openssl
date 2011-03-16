@@ -34,7 +34,7 @@ perl bn-586.pl win32n %ASMOPTS% > bn_win32.asm
 if ERRORLEVEL 1 goto error
 perl co-586.pl win32n %ASMOPTS% > co_win32.asm
 if ERRORLEVEL 1 goto error
-perl mo-586.pl win32n %ASMOPTS% > mt_win32.asm
+perl x86-mont.pl win32n %ASMOPTS% > mt_win32.asm
 if ERRORLEVEL 1 goto error
 cd ..\..\..
 

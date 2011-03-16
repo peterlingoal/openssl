@@ -1,5 +1,5 @@
 /* o_init.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project.
  */
 /* ====================================================================
@@ -59,16 +59,6 @@
 #include <e_os.h>
 #include <openssl/err.h>
 
-/* Internal only functions: only ever used here */
-#ifdef OPENSSL_FIPS
-extern	void int_ERR_lib_init(void);
-# ifndef OPENSSL_NO_ENGINE
-extern	void int_EVP_MD_init_engine_callbacks(void );
-extern	void int_EVP_CIPHER_init_engine_callbacks(void );
-extern	void int_RAND_init_engine_callbacks(void );
-# endif
-#endif
-
 /* Perform any essential OpenSSL initialization operations.
  * Currently only sets FIPS callbacks
  */
@@ -83,7 +73,7 @@ void OPENSSL_init(void)
 #ifdef CRYPTO_MDEBUG
 		CRYPTO_malloc_debug_init();
 #endif
-#ifndef OPENSSL_NO_ENGINE
+#ifdef OPENSSL_ENGINE
 		int_EVP_MD_init_engine_callbacks();
 		int_EVP_CIPHER_init_engine_callbacks();
 		int_RAND_init_engine_callbacks();

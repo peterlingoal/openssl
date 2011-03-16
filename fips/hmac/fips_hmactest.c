@@ -1,5 +1,5 @@
 /* fips_hmactest.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2005.
  */
 /* ====================================================================
@@ -63,8 +63,7 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/err.h>
-#include <openssl/bn.h>
-
+#include <openssl/fips.h>
 #include <openssl/x509v3.h>
 
 #ifndef OPENSSL_FIPS
@@ -77,7 +76,6 @@ int main(int argc, char *argv[])
 
 #else
 
-#include <openssl/fips.h>
 #include "fips_utl.h"
 
 static int hmac_test(const EVP_MD *md, FILE *out, FILE *in);

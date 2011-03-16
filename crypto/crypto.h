@@ -219,13 +219,9 @@ typedef struct openssl_item_st
 #define CRYPTO_LOCK_EC_PRE_COMP		36
 #define CRYPTO_LOCK_STORE		37
 #define CRYPTO_LOCK_COMP		38
-#ifndef OPENSSL_FIPS
-#define CRYPTO_NUM_LOCKS		39
-#else
 #define CRYPTO_LOCK_FIPS		39
 #define CRYPTO_LOCK_FIPS2		40
 #define CRYPTO_NUM_LOCKS		41
-#endif
 
 #define CRYPTO_LOCK		1
 #define CRYPTO_UNLOCK		2
@@ -362,7 +358,6 @@ int CRYPTO_is_mem_check_on(void);
 #define is_MemCheck_on() CRYPTO_is_mem_check_on()
 
 #define OPENSSL_malloc(num)	CRYPTO_malloc((int)num,__FILE__,__LINE__)
-#define OPENSSL_strdup(str)	CRYPTO_strdup((str),__FILE__,__LINE__)
 #define OPENSSL_realloc(addr,num) \
 	CRYPTO_realloc((char *)addr,(int)num,__FILE__,__LINE__)
 #define OPENSSL_realloc_clean(addr,old_num,num) \
@@ -474,7 +469,6 @@ void CRYPTO_get_mem_debug_functions(void (**m)(void *,int,const char *,int,int),
 void *CRYPTO_malloc_locked(int num, const char *file, int line);
 void CRYPTO_free_locked(void *);
 void *CRYPTO_malloc(int num, const char *file, int line);
-char *CRYPTO_strdup(const char *str, const char *file, int line);
 void CRYPTO_free(void *);
 void *CRYPTO_realloc(void *addr,int num, const char *file, int line);
 void *CRYPTO_realloc_clean(void *addr,int old_num,int num,const char *file,
@@ -532,7 +526,6 @@ void OpenSSLDie(const char *file,int line,const char *assertion);
 
 unsigned long *OPENSSL_ia32cap_loc(void);
 #define OPENSSL_ia32cap (*(OPENSSL_ia32cap_loc()))
-int OPENSSL_isservice(void);
 
 #ifdef OPENSSL_FIPS
 #define FIPS_ERROR_IGNORED(alg) OpenSSLDie(__FILE__, __LINE__, \

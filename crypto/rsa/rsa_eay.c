@@ -150,6 +150,16 @@ const RSA_METHOD *RSA_PKCS1_SSLeay(void)
 	return(&rsa_pkcs1_eay_meth);
 	}
 
+/* Usage example;
+ *    MONT_HELPER(rsa, bn_ctx, p, rsa->flags & RSA_FLAG_CACHE_PRIVATE, goto err);
+ */
+#define MONT_HELPER(rsa, ctx, m, pre_cond, err_instr) \
+	if((pre_cond) && ((rsa)->_method_mod_##m == NULL) && \
+			!BN_MONT_CTX_set_locked(&((rsa)->_method_mod_##m), \
+				CRYPTO_LOCK_RSA, \
+				(rsa)->m, (ctx))) \
+		err_instr
+
 static int RSA_eay_public_encrypt(int flen, const unsigned char *from,
 	     unsigned char *to, RSA *rsa, int padding)
 	{
@@ -217,15 +227,13 @@ static int RSA_eay_public_encrypt(int flen, const unsigned char *from,
 	if (BN_bin2bn(buf,num,f) == NULL) goto err;
 	
 	if (BN_ucmp(f, rsa->n) >= 0)
-		{
+		{	
 		/* usually the padding functions would catch this */
 		RSAerr(RSA_F_RSA_EAY_PUBLIC_ENCRYPT,RSA_R_DATA_TOO_LARGE_FOR_MODULUS);
 		goto err;
 		}
 
-	if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
-		if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_n, CRYPTO_LOCK_RSA, rsa->n, ctx))
-			goto err;
+	MONT_HELPER(rsa, ctx, n, rsa->flags & RSA_FLAG_CACHE_PUBLIC, goto err);
 
 	if (!rsa->meth->bn_mod_exp(ret,f,rsa->e,rsa->n,ctx,
 		rsa->_method_mod_n)) goto err;
@@ -428,11 +436,9 @@ static int RSA_eay_private_encrypt(int flen, const unsigned char *from,
 			BN_with_flags(d, rsa->d, BN_FLG_CONSTTIME);
 			}
 		else
-			d= rsa->d;
+			d = rsa->d;
 
-		if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
-			if(!BN_MONT_CTX_set_locked(&rsa->_method_mod_n, CRYPTO_LOCK_RSA, rsa->n, ctx))
-				goto err;
+		MONT_HELPER(rsa, ctx, n, rsa->flags & RSA_FLAG_CACHE_PUBLIC, goto err);
 
 		if (!rsa->meth->bn_mod_exp(ret,f,d,rsa->n,ctx,
 				rsa->_method_mod_n)) goto err;
@@ -553,9 +559,7 @@ static int RSA_eay_private_decrypt(int flen, const unsigned char *from,
 		else
 			d = rsa->d;
 
-		if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
-			if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_n, CRYPTO_LOCK_RSA, rsa->n, ctx))
-				goto err;
+		MONT_HELPER(rsa, ctx, n, rsa->flags & RSA_FLAG_CACHE_PUBLIC, goto err);
 		if (!rsa->meth->bn_mod_exp(ret,f,d,rsa->n,ctx,
 				rsa->_method_mod_n))
 		  goto err;
@@ -665,15 +669,13 @@ static int RSA_eay_public_decrypt(int flen, const unsigned char *from,
 		goto err;
 		}
 
-	if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
-		if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_n, CRYPTO_LOCK_RSA, rsa->n, ctx))
-			goto err;
+	MONT_HELPER(rsa, ctx, n, rsa->flags & RSA_FLAG_CACHE_PUBLIC, goto err);
 
 	if (!rsa->meth->bn_mod_exp(ret,f,rsa->e,rsa->n,ctx,
 		rsa->_method_mod_n)) goto err;
 
 	if ((padding == RSA_X931_PADDING) && ((ret->d[0] & 0xf) != 12))
-		if (!BN_sub(ret, rsa->n, ret)) goto err;
+		BN_sub(ret, rsa->n, ret);
 
 	p=buf;
 	i=BN_bn2bin(ret,p);
@@ -715,6 +717,7 @@ static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	BIGNUM *r1,*m1,*vrfy;
 	BIGNUM local_dmp1,local_dmq1,local_c,local_r1;
 	BIGNUM *dmp1,*dmq1,*c,*pr1;
+	int bn_flags;
 	int ret=0;
 
 	BN_CTX_start(ctx);
@@ -722,41 +725,31 @@ static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	m1 = BN_CTX_get(ctx);
 	vrfy = BN_CTX_get(ctx);
 
-	{
-		BIGNUM local_p, local_q;
-		BIGNUM *p = NULL, *q = NULL;
+	/* Make sure mod_inverse in montgomerey intialization use correct 
+	 * BN_FLG_CONSTTIME flag.
+	 */
+	bn_flags = rsa->p->flags;
+	if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))
+		{
+		rsa->p->flags |= BN_FLG_CONSTTIME;
+		}
+	MONT_HELPER(rsa, ctx, p, rsa->flags & RSA_FLAG_CACHE_PRIVATE, goto err);
+	/* We restore bn_flags back */
+	rsa->p->flags = bn_flags;
 
-		/* Make sure BN_mod_inverse in Montgomery intialization uses the
-		 * BN_FLG_CONSTTIME flag (unless RSA_FLAG_NO_CONSTTIME is set)
-		 */
-		if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))
-			{
-			BN_init(&local_p);
-			p = &local_p;
-			BN_with_flags(p, rsa->p, BN_FLG_CONSTTIME);
+        /* Make sure mod_inverse in montgomerey intialization use correct
+         * BN_FLG_CONSTTIME flag.
+         */
+	bn_flags = rsa->q->flags;
+	if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))
+		{
+		rsa->q->flags |= BN_FLG_CONSTTIME;
+		}
+	MONT_HELPER(rsa, ctx, q, rsa->flags & RSA_FLAG_CACHE_PRIVATE, goto err);
+	/* We restore bn_flags back */
+	rsa->q->flags = bn_flags;	
 
-			BN_init(&local_q);
-			q = &local_q;
-			BN_with_flags(q, rsa->q, BN_FLG_CONSTTIME);
-			}
-		else
-			{
-			p = rsa->p;
-			q = rsa->q;
-			}
-
-		if (rsa->flags & RSA_FLAG_CACHE_PRIVATE)
-			{
-			if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_p, CRYPTO_LOCK_RSA, p, ctx))
-				goto err;
-			if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_q, CRYPTO_LOCK_RSA, q, ctx))
-				goto err;
-			}
-	}
-
-	if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
-		if (!BN_MONT_CTX_set_locked(&rsa->_method_mod_n, CRYPTO_LOCK_RSA, rsa->n, ctx))
-			goto err;
+	MONT_HELPER(rsa, ctx, n, rsa->flags & RSA_FLAG_CACHE_PUBLIC, goto err);
 
 	/* compute I mod q */
 	if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))

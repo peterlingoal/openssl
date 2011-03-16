@@ -61,11 +61,8 @@
 #include "cryptlib.h"
 #include <openssl/rand.h>
 #include "rand_lcl.h"
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
 #include <openssl/fips_rand.h>
-#endif
-
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
@@ -223,6 +220,7 @@ void RAND_add(const void *buf, int num, double entropy)
 int RAND_bytes(unsigned char *buf, int num)
 	{
 	const RAND_METHOD *meth = RAND_get_rand_method();
+	memset(buf, 0, num);
 	if (meth && meth->bytes)
 		return meth->bytes(buf,num);
 	return(-1);
@@ -231,6 +229,7 @@ int RAND_bytes(unsigned char *buf, int num)
 int RAND_pseudo_bytes(unsigned char *buf, int num)
 	{
 	const RAND_METHOD *meth = RAND_get_rand_method();
+	memset(buf, 0, num);
 	if (meth && meth->pseudorand)
 		return meth->pseudorand(buf,num);
 	return(-1);

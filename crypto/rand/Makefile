@@ -94,19 +94,17 @@ rand_eng.o: ../../e_os.h ../../include/openssl/asn1.h
 rand_eng.o: ../../include/openssl/bio.h ../../include/openssl/buffer.h
 rand_eng.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
 rand_eng.o: ../../include/openssl/des_old.h ../../include/openssl/e_os2.h
-rand_eng.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
-rand_eng.o: ../../include/openssl/ecdsa.h ../../include/openssl/engine.h
-rand_eng.o: ../../include/openssl/err.h ../../include/openssl/evp.h
-rand_eng.o: ../../include/openssl/fips.h ../../include/openssl/fips_rand.h
-rand_eng.o: ../../include/openssl/lhash.h ../../include/openssl/obj_mac.h
-rand_eng.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+rand_eng.o: ../../include/openssl/engine.h ../../include/openssl/err.h
+rand_eng.o: ../../include/openssl/evp.h ../../include/openssl/fips.h
+rand_eng.o: ../../include/openssl/fips_rand.h ../../include/openssl/lhash.h
+rand_eng.o: ../../include/openssl/obj_mac.h ../../include/openssl/objects.h
+rand_eng.o: ../../include/openssl/opensslconf.h
 rand_eng.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
-rand_eng.o: ../../include/openssl/pkcs7.h ../../include/openssl/rand.h
-rand_eng.o: ../../include/openssl/safestack.h ../../include/openssl/sha.h
-rand_eng.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
-rand_eng.o: ../../include/openssl/ui.h ../../include/openssl/ui_compat.h
-rand_eng.o: ../../include/openssl/x509.h ../../include/openssl/x509_vfy.h
-rand_eng.o: ../cryptlib.h rand_eng.c rand_lcl.h
+rand_eng.o: ../../include/openssl/rand.h ../../include/openssl/safestack.h
+rand_eng.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
+rand_eng.o: ../../include/openssl/symhacks.h ../../include/openssl/ui.h
+rand_eng.o: ../../include/openssl/ui_compat.h ../cryptlib.h rand_eng.c
+rand_eng.o: rand_lcl.h
 rand_err.o: ../../include/openssl/bio.h ../../include/openssl/crypto.h
 rand_err.o: ../../include/openssl/e_os2.h ../../include/openssl/err.h
 rand_err.o: ../../include/openssl/lhash.h ../../include/openssl/opensslconf.h
@@ -118,19 +116,17 @@ rand_lib.o: ../../e_os.h ../../include/openssl/asn1.h
 rand_lib.o: ../../include/openssl/bio.h ../../include/openssl/buffer.h
 rand_lib.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
 rand_lib.o: ../../include/openssl/des_old.h ../../include/openssl/e_os2.h
-rand_lib.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
-rand_lib.o: ../../include/openssl/ecdsa.h ../../include/openssl/engine.h
-rand_lib.o: ../../include/openssl/err.h ../../include/openssl/evp.h
-rand_lib.o: ../../include/openssl/fips.h ../../include/openssl/fips_rand.h
-rand_lib.o: ../../include/openssl/lhash.h ../../include/openssl/obj_mac.h
-rand_lib.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+rand_lib.o: ../../include/openssl/engine.h ../../include/openssl/err.h
+rand_lib.o: ../../include/openssl/evp.h ../../include/openssl/fips.h
+rand_lib.o: ../../include/openssl/fips_rand.h ../../include/openssl/lhash.h
+rand_lib.o: ../../include/openssl/obj_mac.h ../../include/openssl/objects.h
+rand_lib.o: ../../include/openssl/opensslconf.h
 rand_lib.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
-rand_lib.o: ../../include/openssl/pkcs7.h ../../include/openssl/rand.h
-rand_lib.o: ../../include/openssl/safestack.h ../../include/openssl/sha.h
-rand_lib.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
-rand_lib.o: ../../include/openssl/ui.h ../../include/openssl/ui_compat.h
-rand_lib.o: ../../include/openssl/x509.h ../../include/openssl/x509_vfy.h
-rand_lib.o: ../cryptlib.h rand_lcl.h rand_lib.c
+rand_lib.o: ../../include/openssl/rand.h ../../include/openssl/safestack.h
+rand_lib.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
+rand_lib.o: ../../include/openssl/symhacks.h ../../include/openssl/ui.h
+rand_lib.o: ../../include/openssl/ui_compat.h ../cryptlib.h rand_lcl.h
+rand_lib.o: rand_lib.c
 rand_nw.o: ../../e_os.h ../../include/openssl/asn1.h
 rand_nw.o: ../../include/openssl/bio.h ../../include/openssl/buffer.h
 rand_nw.o: ../../include/openssl/crypto.h ../../include/openssl/e_os2.h

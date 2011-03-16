@@ -1,5 +1,5 @@
 /* rsa_pss.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2005.
  */
 /* ====================================================================
@@ -217,7 +217,7 @@ int RSA_padding_add_PKCS1_PSS(RSA *rsa, unsigned char *EM,
 		   		ERR_R_MALLOC_FAILURE);
 			goto err;
 			}
-		if (RAND_bytes(salt, sLen) <= 0)
+		if (!RAND_bytes(salt, sLen))
 			goto err;
 		}
 	maskedDBLen = emLen - hLen - 1;

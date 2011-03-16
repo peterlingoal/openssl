@@ -62,7 +62,6 @@
 #include <openssl/fips.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/bn.h>
 
 #ifdef OPENSSL_FIPS
 

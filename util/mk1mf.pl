@@ -54,7 +54,6 @@ $infile="MINFO";
 	"FreeBSD","FreeBSD distribution",
 	"OS2-EMX", "EMX GCC OS/2",
 	"netware-clib", "CodeWarrior for NetWare - CLib - with WinSock Sockets",
-	"netware-clib-bsdsock", "CodeWarrior for NetWare - CLib - with BSD Sockets",
 	"netware-libc", "CodeWarrior for NetWare - LibC - with WinSock Sockets",
 	"netware-libc-bsdsock", "CodeWarrior for NetWare - LibC - with BSD Sockets",
 	"default","cc under unix",
@@ -89,7 +88,7 @@ and [options] can be one of
 	no-hw					- No hw
 	nasm 					- Use NASM for x86 asm
 	nw-nasm					- Use NASM x86 asm for NetWare
-	nw-mwasm				- Use Metrowerks x86 asm for NetWare
+	nw-mwasm					- Use Metrowerks x86 asm for NetWare
 	gaswin					- Use GNU as with Mingw32
 	no-socks				- No socket code
 	no-err					- No error strings
@@ -130,6 +129,7 @@ $tmp_def="tmp";
 
 $perl="perl" unless defined $perl;
 $mkdir="-mkdir" unless defined $mkdir;
+$mkcanister="ld -r -o";
 
 ($ssl,$crypto)=("ssl","crypto");
 $ranlib="echo ranlib";
@@ -186,10 +186,10 @@ elsif ($platform eq "OS2-EMX")
 	require 'OS2-EMX.pl';
 	}
 elsif (($platform eq "netware-clib") || ($platform eq "netware-libc") ||
-       ($platform eq "netware-clib-bsdsock") || ($platform eq "netware-libc-bsdsock"))
+       ($platform eq "netware-libc-bsdsock"))
 	{
 	$LIBC=1 if $platform eq "netware-libc" || $platform eq "netware-libc-bsdsock";
-	$BSDSOCK=1 if ($platform eq "netware-libc-bsdsock") || ($platform eq "netware-clib-bsdsock");
+	$BSDSOCK=1 if $platform eq "netware-libc-bsdsock";
 	require 'netware.pl';
 	}
 else
@@ -231,10 +231,6 @@ $cflags.=" -DOPENSSL_NO_DH"   if $no_dh;
 $cflags.=" -DOPENSSL_NO_SOCK" if $no_sock;
 $cflags.=" -DOPENSSL_NO_SSL2" if $no_ssl2;
 $cflags.=" -DOPENSSL_NO_SSL3" if $no_ssl3;
-$cflags.=" -DOPENSSL_NO_TLSEXT" if $no_tlsext;
-$cflags.=" -DOPENSSL_NO_CMS" if $no_cms;
-$cflags.=" -DOPENSSL_NO_JPAKE" if $no_jpake;
-$cflags.=" -DOPENSSL_NO_CAPIENG" if $no_capieng;
 $cflags.=" -DOPENSSL_NO_ERR"  if $no_err;
 $cflags.=" -DOPENSSL_NO_KRB5" if $no_krb5;
 $cflags.=" -DOPENSSL_NO_EC"   if $no_ec;
@@ -243,6 +239,7 @@ $cflags.=" -DOPENSSL_NO_ECDH" if $no_ecdh;
 $cflags.=" -DOPENSSL_NO_ENGINE"   if $no_engine;
 $cflags.=" -DOPENSSL_NO_HW"   if $no_hw;
 $cflags.=" -DOPENSSL_FIPS"    if $fips;
+
 $cflags.= " -DZLIB" if $zlib_opt;
 $cflags.= " -DZLIB_SHARED" if $zlib_opt == 2;
 
@@ -478,24 +475,24 @@ if ($fips)
 if ($shlib)
 	{
 	$extra_install= <<"EOF";
-	\$(CP) \"\$(O_SSL)\" \"\$(INSTALLTOP)${o}bin\"
-	\$(CP) \"\$(O_CRYPTO)\" \"\$(INSTALLTOP)${o}bin\"
-	\$(CP) \"\$(L_SSL)\" \"\$(INSTALLTOP)${o}lib\"
-	\$(CP) \"\$(L_CRYPTO)\" \"\$(INSTALLTOP)${o}lib\"
+	\$(CP) \$(O_SSL) \$(INSTALLTOP)${o}bin
+	\$(CP) \$(O_CRYPTO) \$(INSTALLTOP)${o}bin
+	\$(CP) \$(L_SSL) \$(INSTALLTOP)${o}lib
+	\$(CP) \$(L_CRYPTO) \$(INSTALLTOP)${o}lib
 EOF
 	if ($no_static_engine)
 		{
 		$extra_install .= <<"EOF"
-	\$(MKDIR) \"\$(INSTALLTOP)${o}lib${o}engines\"
-	\$(CP) \"\$(E_SHLIB)\" \"\$(INSTALLTOP)${o}lib${o}engines\"
+	\$(MKDIR) \$(INSTALLTOP)${o}lib${o}engines
+	\$(CP) \$(E_SHLIB) \$(INSTALLTOP)${o}lib${o}engines
 EOF
 		}
 	}
 else
 	{
 	$extra_install= <<"EOF";
-	\$(CP) \"\$(O_SSL)\" \"\$(INSTALLTOP)${o}lib\"
-	\$(CP) \"\$(O_CRYPTO)\" \"\$(INSTALLTOP)${o}lib\"
+	\$(CP) \$(O_SSL) \$(INSTALLTOP)${o}lib
+	\$(CP) \$(O_CRYPTO) \$(INSTALLTOP)${o}lib
 EOF
 	$ex_libs .= " $zlib_lib" if $zlib_opt == 1;
 	}
@@ -583,6 +580,7 @@ MKDIR=$mkdir
 MKLIB=$bin_dir$mklib
 MLFLAGS=$mlflags
 ASM=$bin_dir$asm
+MKCANISTER=$mkcanister
 
 # FIPS validated module and support file locations
 
@@ -652,7 +650,7 @@ banner:
 $banner
 
 \$(TMP_D):
-	\$(MKDIR) \"\$(TMP_D)\"
+	\$(MKDIR) \$(TMP_D)
 # NB: uncomment out these lines if BIN_D, TEST_D and LIB_D are different
 #\$(BIN_D):
 #	\$(MKDIR) \$(BIN_D)
@@ -661,13 +659,13 @@ $banner
 #	\$(MKDIR) \$(TEST_D)
 
 \$(LIB_D):
-	\$(MKDIR) \"\$(LIB_D)\"
+	\$(MKDIR) \$(LIB_D)
 
 \$(INCO_D): \$(INC_D)
-	\$(MKDIR) \"\$(INCO_D)\"
+	\$(MKDIR) \$(INCO_D)
 
 \$(INC_D):
-	\$(MKDIR) \"\$(INC_D)\"
+	\$(MKDIR) \$(INC_D)
 
 headers: \$(HEADER) \$(EXHEADER)
 	@
@@ -677,14 +675,14 @@ lib: \$(LIBS_DEP) \$(E_SHLIB)
 exe: \$(T_EXE) \$(BIN_D)$o\$(E_EXE)$exep
 
 install: all
-	\$(MKDIR) \"\$(INSTALLTOP)\"
-	\$(MKDIR) \"\$(INSTALLTOP)${o}bin\"
-	\$(MKDIR) \"\$(INSTALLTOP)${o}include\"
-	\$(MKDIR) \"\$(INSTALLTOP)${o}include${o}openssl\"
-	\$(MKDIR) \"\$(INSTALLTOP)${o}lib\"
-	\$(CP) \"\$(INCO_D)${o}*.\[ch\]\" \"\$(INSTALLTOP)${o}include${o}openssl\"
-	\$(CP) \"\$(BIN_D)$o\$(E_EXE)$exep\" \"\$(INSTALLTOP)${o}bin\"
-	\$(CP) \"apps${o}openssl.cnf\" \"\$(INSTALLTOP)\"
+	\$(MKDIR) \$(INSTALLTOP)
+	\$(MKDIR) \$(INSTALLTOP)${o}bin
+	\$(MKDIR) \$(INSTALLTOP)${o}include
+	\$(MKDIR) \$(INSTALLTOP)${o}include${o}openssl
+	\$(MKDIR) \$(INSTALLTOP)${o}lib
+	\$(CP) \$(INCO_D)${o}*.\[ch\] \$(INSTALLTOP)${o}include${o}openssl
+	\$(CP) \$(BIN_D)$o\$(E_EXE)$exep \$(INSTALLTOP)${o}bin
+	\$(CP) apps${o}openssl.cnf \$(INSTALLTOP)
 $extra_install
 
 
@@ -863,8 +861,7 @@ foreach (values %lib_nam)
 	}
 
 # hack to add version info on MSVC
-if (($platform eq "VC-WIN32") || ($platform eq "VC-WIN64A")
-	|| ($platform eq "VC-WIN64I") || ($platform eq "VC-NT")) {
+if (($platform eq "VC-WIN32") || ($platform eq "VC-NT")) {
     $rules.= <<"EOF";
 \$(OBJ_D)\\\$(CRYPTO).res: ms\\version32.rc
 	\$(RSC) /fo"\$(OBJ_D)\\\$(CRYPTO).res" /d CRYPTO ms\\version32.rc
@@ -1021,9 +1018,6 @@ sub var_add
 	return("") if $no_dsa  && $dir =~ /\/dsa/;
 	return("") if $no_dh   && $dir =~ /\/dh/;
 	return("") if $no_ec   && $dir =~ /\/ec/;
-	return("") if $no_cms  && $dir =~ /\/cms/;
-	return("") if $no_jpake  && $dir =~ /\/jpake/;
-	return("") if !$fips   && $dir =~ /^fips/;
 	if ($no_des && $dir =~ /\/des/)
 		{
 		if ($val =~ /read_pwd/)
@@ -1143,7 +1137,7 @@ sub do_defs
 		$ret.=$t;
 		}
 	# hack to add version info on MSVC
-	if ($shlib && (($platform eq "VC-WIN32") || ($platfrom eq "VC-WIN64I") || ($platform eq "VC-WIN64A") || ($platform eq "VC-NT")))
+	if ($shlib && (($platform eq "VC-WIN32") || ($platform eq "VC-NT")))
 		{
 		if ($var eq "CRYPTOOBJ")
 			{ $ret.="\$(OBJ_D)\\\$(CRYPTO).res "; }
@@ -1245,7 +1239,7 @@ sub do_copy_rule
 		if ($n =~ /bss_file/)
 			{ $pp=".c"; }
 		else	{ $pp=$p; }
-		$ret.="$to${o}$n$pp: \$(SRC_D)$o$_$pp\n\t\$(CP) \"\$(SRC_D)$o$_$pp\" \"$to${o}$n$pp\"\n\n";
+		$ret.="$to${o}$n$pp: \$(SRC_D)$o$_$pp\n\t\$(CP) \$(SRC_D)$o$_$pp $to${o}$n$pp\n\n";
 		}
 	return($ret);
 	}
@@ -1289,10 +1283,6 @@ sub read_options
 		"gaswin" => \$gaswin,
 		"no-ssl2" => \$no_ssl2,
 		"no-ssl3" => \$no_ssl3,
-		"no-tlsext" => \$no_tlsext,
-		"no-cms" => \$no_cms,
-		"no-jpake" => \$no_jpake,
-		"no-capieng" => \$no_capieng,
 		"no-err" => \$no_err,
 		"no-sock" => \$no_sock,
 		"no-krb5" => \$no_krb5,
@@ -1315,7 +1305,6 @@ sub read_options
 		"shared" => 0,
 		"no-gmp" => 0,
 		"no-rfc3779" => 0,
-		"no-montasm" => 0,
 		"no-shared" => 0,
 		"no-zlib" => 0,
 		"no-zlib-dynamic" => 0,
@@ -1362,18 +1351,6 @@ sub read_options
 		if (exists $valid_options{$t})
 			{return 1;}
 		return 0;
-		}
-	# experimental-xxx is mostly like enable-xxx, but opensslconf.v
-	# will still set OPENSSL_NO_xxx unless we set OPENSSL_EXPERIMENTAL_xxx.
-	# (No need to fail if we don't know the algorithm -- this is for adventurous users only.)
-	elsif (/^experimental-/)
-		{
-		my $algo, $ALGO;
-		($algo = $_) =~ s/^experimental-//;
-		($ALGO = $algo) =~ tr/[a-z]/[A-Z]/;
-
-		$xcflags="-DOPENSSL_EXPERIMENTAL_$ALGO $xcflags";
-		
 		}
 	elsif (/^--with-krb5-flavor=(.*)$/)
 		{

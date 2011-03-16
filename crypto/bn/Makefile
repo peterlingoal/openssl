@@ -28,13 +28,13 @@ LIBSRC=	bn_add.c bn_div.c bn_exp.c bn_lib.c bn_ctx.c bn_mul.c bn_mod.c \
 	bn_print.c bn_rand.c bn_shift.c bn_word.c bn_blind.c \
 	bn_kron.c bn_sqrt.c bn_gcd.c bn_prime.c bn_err.c bn_sqr.c bn_asm.c \
 	bn_recp.c bn_mont.c bn_mpi.c bn_exp2.c bn_gf2m.c bn_nist.c \
-	bn_depr.c bn_x931p.c bn_const.c bn_opt.c
+	bn_depr.c bn_const.c bn_x931p.c bn_opt.c
 
 LIBOBJ=	bn_add.o bn_div.o bn_exp.o bn_lib.o bn_ctx.o bn_mul.o bn_mod.o \
 	bn_print.o bn_rand.o bn_shift.o bn_word.o bn_blind.o \
 	bn_kron.o bn_sqrt.o bn_gcd.o bn_prime.o bn_err.o bn_sqr.o $(BN_ASM) \
 	bn_recp.o bn_mont.o bn_mpi.o bn_exp2.o bn_gf2m.o bn_nist.o \
-	bn_depr.o bn_x931p.o bn_const.o bn_opt.o
+	bn_depr.o bn_const.o bn_x931p.o bn_opt.o
 
 SRC= $(LIBSRC)
 
@@ -67,22 +67,22 @@ bn86-elf.s:	asm/bn-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) bn-586.pl elf $(CFLAGS) > ../$@)
 co86-elf.s:	asm/co-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) co-586.pl elf $(CFLAGS) > ../$@)
-mo86-elf.s:	asm/mo-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) mo-586.pl elf $(CFLAGS) > ../$@)
+mo86-elf.s:	asm/x86-mont.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) x86-mont.pl elf $(CFLAGS) > ../$@)
 # COFF
 bn86-cof.s: asm/bn-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) bn-586.pl coff $(CFLAGS) > ../$@)
 co86-cof.s: asm/co-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) co-586.pl coff $(CFLAGS) > ../$@)
-mo86-cof.s: asm/mo-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) mo-586.pl coff $(CFLAGS) > ../$@)
+mo86-cof.s: asm/x86-mont.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) x86-mont.pl coff $(CFLAGS) > ../$@)
 # a.out
 bn86-out.s: asm/bn-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) bn-586.pl a.out $(CFLAGS) > ../$@)
 co86-out.s: asm/co-586.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) co-586.pl a.out $(CFLAGS) > ../$@)
-mo86-out.s: asm/mo-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) mo-586.pl a.out $(CFLAGS) > ../$@)
+mo86-out.s: asm/x86-mont.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) x86-mont.pl a.out $(CFLAGS) > ../$@)
 
 sparcv8.o:	asm/sparcv8.S
 	$(CC) $(CFLAGS) -c asm/sparcv8.S
@@ -103,6 +103,9 @@ x86_64-mont.s:	asm/x86_64-mont.pl
 bn-ia64.s:	asm/ia64.S
 	$(CC) $(CFLAGS) -E asm/ia64.S > $@
 
+bn-s390x.s:	asm/s390x.S
+	$(CC) $(CFLAGS) -E asm/s390x.S > $@
+
 # GNU assembler fails to compile PA-RISC2 modules, insist on calling
 # vendor assembler...
 pa-risc2W.o: asm/pa-risc2W.s
@@ -116,7 +119,9 @@ linux_ppc64.s: asm/ppc.pl;	$(PERL) $< $@
 aix_ppc32.s: asm/ppc.pl;	$(PERL) asm/ppc.pl $@
 aix_ppc64.s: asm/ppc.pl;	$(PERL) asm/ppc.pl $@
 osx_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
-osx_ppc64.s: asm/ppc.pl;	$(PERL) $< $@
+
+# GNU make "catch all"
+%-mont.s:	asm/%-mont.pl;  $(PERL) $< $(CFLAGS) > $@
 
 files:
 	$(PERL) $(TOP)/util/files.pl Makefile >> $(TOP)/MINFO

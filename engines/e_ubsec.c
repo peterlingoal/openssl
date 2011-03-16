@@ -631,8 +631,10 @@ static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *dq, const BIGNUM *qinv, BN_CTX *ctx)
 	{
 	int	y_len,
+		m_len,
 		fd;
 
+	m_len = BN_num_bytes(p) + BN_num_bytes(q) + 1;
 	y_len = BN_num_bits(p) + BN_num_bits(q);
 
 	/* Check if hardware can't handle this argument. */
@@ -820,11 +822,11 @@ static int ubsec_dsa_verify(const unsigned char *dgst, int dgst_len,
 	int v_len, d_len;
 	int to_return = 0;
 	int fd;
-	BIGNUM v, *pv = &v;
+	BIGNUM v;
 
 	BN_init(&v);
 
-	if(!bn_wexpand(pv, dsa->p->top)) {
+	if(!bn_wexpand(&v, dsa->p->top)) {
 		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY, UBSEC_R_BN_EXPAND_FAIL);
 		goto err;
 	}
@@ -932,7 +934,7 @@ static int ubsec_dh_generate_key(DH *dh)
                 priv_key = BN_new();
                 if (priv_key == NULL) goto err;
                 priv_key_len = BN_num_bits(dh->p);
-                if(bn_wexpand(priv_key, dh->p->top) == NULL) goto err;
+                bn_wexpand(priv_key, dh->p->top);
                 do
                         if (!BN_rand_range(priv_key, dh->p)) goto err;
                 while (BN_is_zero(priv_key));
@@ -947,7 +949,7 @@ static int ubsec_dh_generate_key(DH *dh)
                 {
                 pub_key = BN_new();
                 pub_key_len = BN_num_bits(dh->p);
-                if(bn_wexpand(pub_key, dh->p->top) == NULL) goto err;
+                bn_wexpand(pub_key, dh->p->top);
                 if(pub_key == NULL) goto err;
                 }
         else

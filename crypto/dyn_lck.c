@@ -166,16 +166,10 @@ static const char* const lock_names[CRYPTO_NUM_LOCKS] =
 	"ec_pre_comp",
 	"store",
 	"comp",
-#ifndef OPENSSL_FIPS
-# if CRYPTO_NUM_LOCKS != 39
-#  error "Inconsistency between crypto.h and cryptlib.c"
-# endif
-#else
 	"fips",
 	"fips2",
-# if CRYPTO_NUM_LOCKS != 41
-#  error "Inconsistency between crypto.h and cryptlib.c"
-# endif
+#if CRYPTO_NUM_LOCKS != 41
+# error "Inconsistency between crypto.h and cryptlib.c"
 #endif
 	};
 
@@ -275,7 +269,7 @@ int CRYPTO_get_new_dynlockid(void)
 	else
 		/* If we found a place with a NULL pointer, put our pointer
 		   in it.  */
-		(void)sk_CRYPTO_dynlock_set(dyn_locks,i,pointer);
+		sk_CRYPTO_dynlock_set(dyn_locks,i,pointer);
 	CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
 
 	if (i == -1)
@@ -317,7 +311,7 @@ void CRYPTO_destroy_dynlockid(int i)
 #endif
 			if (pointer->references <= 0)
 				{
-				(void)sk_CRYPTO_dynlock_set(dyn_locks, i, NULL);
+				sk_CRYPTO_dynlock_set(dyn_locks, i, NULL);
 				}
 			else
 				pointer = NULL;

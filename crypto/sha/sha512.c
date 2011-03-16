@@ -5,10 +5,7 @@
  * ====================================================================
  */
 #include <openssl/opensslconf.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #if !defined(OPENSSL_NO_SHA) && !defined(OPENSSL_NO_SHA512)
 /*
  * IMPLEMENTATION NOTES.
@@ -328,19 +325,19 @@ static const SHA_LONG64 K512[80] = {
 #  elif (defined(__i386) || defined(__i386__)) && !defined(B_ENDIAN)
 #   if defined(I386_ONLY)
 #    define PULL64(x) ({ const unsigned int *p=(const unsigned int *)(&(x));\
-			 unsigned int hi=p[0],lo=p[1];		\
+			unsigned int hi,lo;			\
 				asm("xchgb %%ah,%%al;xchgb %%dh,%%dl;"\
 				    "roll $16,%%eax; roll $16,%%edx; "\
 				    "xchgb %%ah,%%al;xchgb %%dh,%%dl;" \
 				: "=a"(lo),"=d"(hi)		\
-				: "0"(lo),"1"(hi) : "cc");	\
+				: "0"(p[1]),"1"(p[0]) : "cc");	\
 				((SHA_LONG64)hi)<<32|lo;	})
 #   else
 #    define PULL64(x) ({ const unsigned int *p=(const unsigned int *)(&(x));\
-			 unsigned int hi=p[0],lo=p[1];			\
+			unsigned int hi,lo;			\
 				asm ("bswapl %0; bswapl %1;"	\
 				: "=r"(lo),"=r"(hi)		\
-				: "0"(lo),"1"(hi));		\
+				: "0"(p[1]),"1"(p[0]));		\
 				((SHA_LONG64)hi)<<32|lo;	})
 #   endif
 #  elif (defined(_ARCH_PPC) && defined(__64BIT__)) || defined(_ARCH_PPC64)
@@ -543,14 +540,5 @@ static void sha512_block_data_order (SHA512_CTX *ctx, const void *in, size_t num
 #endif
 
 #endif /* SHA512_ASM */
-
-#else /* OPENSSL_NO_SHA512 */
-
-/* Sensitive compilers ("Compaq C V6.4-005 on OpenVMS VAX V7.3", for
- * example) dislike a statement-free file, complaining:
- * "%CC-W-EMPTYFILE, Source file does not contain any declarations."
- */
-
-int sha512_dummy();
 
 #endif /* OPENSSL_NO_SHA512 */

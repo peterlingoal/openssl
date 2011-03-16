@@ -122,9 +122,6 @@
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
-#ifndef OPENSSL_NO_OCSP
-#include <openssl/ocsp.h>
-#endif
 #include <openssl/ossl_typ.h>
 
 int app_RAND_load_file(const char *file, BIO *bio_e, int dont_warn);
@@ -234,12 +231,6 @@ extern int in_FIPS_mode;
 #  endif
 #endif
 
-#ifdef OPENSSL_SYSNAME_WIN32
-#  define openssl_fdset(a,b) FD_SET((unsigned int)a, b)
-#else
-#  define openssl_fdset(a,b) FD_SET(a, b)
-#endif
-
 typedef struct args_st
 	{
 	char **data;
@@ -287,12 +278,6 @@ X509_STORE *setup_verify(BIO *bp, char *CAfile, char *CApath);
 ENGINE *setup_engine(BIO *err, const char *engine, int debug);
 #endif
 
-#ifndef OPENSSL_NO_OCSP
-OCSP_RESPONSE *process_responder(BIO *err, OCSP_REQUEST *req,
-			char *host, char *path, char *port, int use_ssl,
-			int req_timeout);
-#endif
-
 int load_config(BIO *err, CONF *cnf);
 char *make_config_name(void);
 
@@ -338,10 +323,6 @@ X509_NAME *parse_name(char *str, long chtype, int multirdn);
 int args_verify(char ***pargs, int *pargc,
 			int *badarg, BIO *err, X509_VERIFY_PARAM **pm);
 void policies_print(BIO *out, X509_STORE_CTX *ctx);
-#ifndef OPENSSL_NO_JPAKE
-void jpake_client_auth(BIO *out, BIO *conn, const char *secret);
-void jpake_server_auth(BIO *out, BIO *conn, const char *secret);
-#endif
 
 #define FORMAT_UNDEF    0
 #define FORMAT_ASN1     1

@@ -65,10 +65,7 @@ my $output = shift;
 	if ($stddev!=$outdev || $stdino!=$outino);
 }
 
-my $masmref=8 + 50727*2**-32;	# 8.00.50727 shipped with VS2005
-my $masm=$masmref if ($output =~ /\.asm/);
-if ($masm && `ml64 2>&1` =~ m/Version ([0-9]+)\.([0-9]+)(\.([0-9]+))?/)
-{   $masm=$1 + $2*2**-16 + $4*2**-32;   }
+my $masm=1 if ($output =~ /\.asm/);
 
 my $current_segment;
 my $current_function;
@@ -85,12 +82,12 @@ my $current_function;
 	    $line = substr($line,@+[0]); $line =~ s/^\s+//;
 
 	    undef $self->{sz};
-	    if ($self->{op} =~ /^(movz)b.*/) {	# movz is pain...
+	    if ($self->{op} =~ /(movz)b.*/) {	# movz is pain...
 		$self->{op} = $1;
 		$self->{sz} = "b";
 	    } elsif ($self->{op} =~ /call/) {
 		$self->{sz} = ""
-	    } elsif ($self->{op} =~ /([a-z]{3,})([qlwb])$/) {
+	    } elsif ($self->{op} =~ /([a-z]{3,})([qlwb])/) {
 		$self->{op} = $1;
 		$self->{sz} = $2;
 	    }
@@ -116,7 +113,7 @@ my $current_function;
 		"$self->{op}$self->{sz}";
 	    }
 	} else {
-	    $self->{op} =~ s/^movz/movzx/;
+	    $self->{op} =~ s/movz/movzx/;
 	    if ($self->{op} eq "ret") {
 		$self->{op} = "";
 		if ($current_function->{abi} eq "svr4") {
@@ -189,10 +186,8 @@ my $current_function;
 	if (!$masm) {
 	    # Solaris /usr/ccs/bin/as can't handle multiplications
 	    # in $self->{label}
-	    use integer;
 	    $self->{label} =~ s/(?<![0-9a-f])(0[x0-9a-f]+)/oct($1)/egi;
 	    $self->{label} =~ s/([0-9]+\s*[\*\/\%]\s*[0-9]+)/eval($1)/eg;
-	    $self->{label} =~ s/([0-9]+)/$1<<32>>32/eg;
 
 	    if (defined($self->{index})) {
 		sprintf "%s(%%%s,%%%s,%d)",
@@ -361,9 +356,7 @@ my $current_function;
 				    $v="$current_segment\tENDS\n" if ($current_segment);
 				    $current_segment = "_$1\$";
 				    $current_segment =~ tr/[a-z]/[A-Z]/;
-				    $v.="$current_segment\tSEGMENT ";
-				    $v.=$masm>=$masmref ? "ALIGN(64)" : "PAGE";
-				    $v.=" 'CODE'";
+				    $v.="$current_segment\tSEGMENT ALIGN(64) 'CODE'";
 				    $self->{value} = $v;
 				    last;
 				  };
@@ -392,15 +385,11 @@ my $current_function;
 			    && do { my @arr = split(',',$line);
 				    my $sz  = substr($1,0,1);
 				    my $last = pop(@arr);
-				    my $conv = sub  {	my $var=shift;
-							if ($var=~s/0x([0-9a-f]+)/0$1h/i) { $var; }
-							else { sprintf"0%Xh",$var; }
-						    };  
 
 				    $sz =~ tr/bvlq/BWDQ/;
 				    $self->{value} = "\tD$sz\t";
-				    for (@arr) { $self->{value} .= &$conv($_).","; }
-				    $self->{value} .= &$conv($last);
+				    for (@arr) { $self->{value} .= sprintf"0%Xh,",oct; }
+				    $self->{value} .= sprintf"0%Xh",oct($last);
 				    last;
 				  };
 		/\.picmeup/ && do { $self->{value} = sprintf"\tDD\t 0%Xh,090000000h",$opcode{$line};

@@ -125,13 +125,8 @@
 #include <openssl/objects.h>
 #include <openssl/lhash.h>
 #include <openssl/x509v3.h>
-#include <openssl/rand.h>
-#include <openssl/ocsp.h>
 #ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
-#endif
-#ifndef OPENSSL_NO_ENGINE
-#include <openssl/engine.h>
 #endif
 
 const char *SSL_version_str=OPENSSL_VERSION_TEXT;
@@ -311,19 +306,7 @@ SSL *SSL_new(SSL_CTX *ctx)
 
 	CRYPTO_add(&ctx->references,1,CRYPTO_LOCK_SSL_CTX);
 	s->ctx=ctx;
-#ifndef OPENSSL_NO_TLSEXT
-	s->tlsext_debug_cb = 0;
-	s->tlsext_debug_arg = NULL;
-	s->tlsext_ticket_expected = 0;
-	s->tlsext_status_type = -1;
-	s->tlsext_status_expected = 0;
-	s->tlsext_ocsp_ids = NULL;
-	s->tlsext_ocsp_exts = NULL;
-	s->tlsext_ocsp_resp = NULL;
-	s->tlsext_ocsp_resplen = -1;
-	CRYPTO_add(&ctx->references,1,CRYPTO_LOCK_SSL_CTX);
-	s->initial_ctx=ctx;
-#endif
+
 	s->verify_result=X509_V_OK;
 
 	s->method=ctx->method;
@@ -508,24 +491,12 @@ void SSL_free(SSL *s)
 	if (s->cert != NULL) ssl_cert_free(s->cert);
 	/* Free up if allocated */
 
-#ifndef OPENSSL_NO_TLSEXT
-	if (s->tlsext_hostname)
-		OPENSSL_free(s->tlsext_hostname);
-	if (s->initial_ctx) SSL_CTX_free(s->initial_ctx);
-	if (s->tlsext_ocsp_exts)
-		sk_X509_EXTENSION_pop_free(s->tlsext_ocsp_exts,
-						X509_EXTENSION_free);
-	if (s->tlsext_ocsp_ids)
-		sk_OCSP_RESPID_pop_free(s->tlsext_ocsp_ids, OCSP_RESPID_free);
-	if (s->tlsext_ocsp_resp)
-		OPENSSL_free(s->tlsext_ocsp_resp);
-#endif
+	if (s->ctx) SSL_CTX_free(s->ctx);
+
 	if (s->client_CA != NULL)
 		sk_X509_NAME_pop_free(s->client_CA,X509_NAME_free);
 
 	if (s->method != NULL) s->method->ssl_free(s);
-
-	if (s->ctx) SSL_CTX_free(s->ctx);
 
 #ifndef	OPENSSL_NO_KRB5
 	if (s->kssl_ctx != NULL)
@@ -987,12 +958,8 @@ long SSL_ctrl(SSL *s,int cmd,long larg,void *parg)
 
 	case SSL_CTRL_OPTIONS:
 		return(s->options|=larg);
-	case SSL_CTRL_CLEAR_OPTIONS:
-		return(s->options&=~larg);
 	case SSL_CTRL_MODE:
 		return(s->mode|=larg);
-	case SSL_CTRL_CLEAR_MODE:
-		return(s->mode &=~larg);
 	case SSL_CTRL_GET_MAX_CERT_LIST:
 		return(s->max_cert_list);
 	case SSL_CTRL_SET_MAX_CERT_LIST:
@@ -1000,17 +967,12 @@ long SSL_ctrl(SSL *s,int cmd,long larg,void *parg)
 		s->max_cert_list=larg;
 		return(l);
 	case SSL_CTRL_SET_MTU:
-		if (SSL_version(s) == DTLS1_VERSION ||
-		    SSL_version(s) == DTLS1_BAD_VER)
+		if (SSL_version(s) == DTLS1_VERSION)
 			{
 			s->d1->mtu = larg;
 			return larg;
 			}
 		return 0;
-	case SSL_CTRL_GET_RI_SUPPORT:
-		if (s->s3)
-			return s->s3->send_connection_binding;
-		else return 0;
 	default:
 		return(s->method->ssl_ctrl(s,cmd,larg,parg));
 		}
@@ -1097,12 +1059,8 @@ long SSL_CTX_ctrl(SSL_CTX *ctx,int cmd,long larg,void *parg)
 		return(ctx->stats.sess_cache_full);
 	case SSL_CTRL_OPTIONS:
 		return(ctx->options|=larg);
-	case SSL_CTRL_CLEAR_OPTIONS:
-		return(ctx->options&=~larg);
 	case SSL_CTRL_MODE:
 		return(ctx->mode|=larg);
-	case SSL_CTRL_CLEAR_MODE:
-		return(ctx->mode&=~larg);
 	default:
 		return(ctx->method->ssl_ctx_ctrl(ctx,cmd,larg,parg));
 		}
@@ -1243,6 +1201,7 @@ int SSL_set_cipher_list(SSL *s,const char *str)
 char *SSL_get_shared_ciphers(const SSL *s,char *buf,int len)
 	{
 	char *p;
+	const char *cp;
 	STACK_OF(SSL_CIPHER) *sk;
 	SSL_CIPHER *c;
 	int i;
@@ -1255,21 +1214,20 @@ char *SSL_get_shared_ciphers(const SSL *s,char *buf,int len)
 	sk=s->session->ciphers;
 	for (i=0; i<sk_SSL_CIPHER_num(sk); i++)
 		{
-		int n;
-
+		/* Decrement for either the ':' or a '\0' */
+		len--;
 		c=sk_SSL_CIPHER_value(sk,i);
-		n=strlen(c->name);
-		if (n+1 > len)
+		for (cp=c->name; *cp; )
 			{
-			if (p != buf)
-				--p;
-			*p='\0';
-			return buf;
+			if (len-- <= 0)
+				{
+				*p='\0';
+				return(buf);
+				}
+			else
+				*(p++)= *(cp++);
 			}
-		strcpy(p,c->name);
-		p+=n;
 		*(p++)=':';
-		len-=n+1;
 		}
 	p[-1]='\0';
 	return(buf);
@@ -1299,22 +1257,6 @@ int ssl_cipher_list_to_bytes(SSL *s,STACK_OF(SSL_CIPHER) *sk,unsigned char *p,
 		j = put_cb ? put_cb(c,p) : ssl_put_cipher_by_char(s,c,p);
 		p+=j;
 		}
-	/* If p == q, no ciphers and caller indicates an error. Otherwise
-	 * add SCSV if not renegotiating.
-	 */
-	if (p != q && !s->new_session)
-		{
-		static SSL_CIPHER scsv =
-			{
-			0, NULL, SSL3_CK_SCSV, 0, 0, 0, 0, 0, 0, 0,
-			};
-		j = put_cb ? put_cb(&scsv,p) : ssl_put_cipher_by_char(s,&scsv,p);
-		p+=j;
-#ifdef OPENSSL_RI_DEBUG
-		fprintf(stderr, "SCSV sent by client\n");
-#endif
-		}
-
 	return(p-q);
 	}
 
@@ -1324,8 +1266,6 @@ STACK_OF(SSL_CIPHER) *ssl_bytes_to_cipher_list(SSL *s,unsigned char *p,int num,
 	SSL_CIPHER *c;
 	STACK_OF(SSL_CIPHER) *sk;
 	int i,n;
-	if (s->s3)
-		s->s3->send_connection_binding = 0;
 
 	n=ssl_put_cipher_by_char(s,NULL,NULL);
 	if ((num%n) != 0)
@@ -1343,26 +1283,6 @@ STACK_OF(SSL_CIPHER) *ssl_bytes_to_cipher_list(SSL *s,unsigned char *p,int num,
 
 	for (i=0; i<num; i+=n)
 		{
-		/* Check for SCSV */
-		if (s->s3 && (n != 3 || !p[0]) &&
-			(p[n-2] == ((SSL3_CK_SCSV >> 8) & 0xff)) &&
-			(p[n-1] == (SSL3_CK_SCSV & 0xff)))
-			{
-			/* SCSV fatal if renegotiating */
-			if (s->new_session)
-				{
-				SSLerr(SSL_F_SSL_BYTES_TO_CIPHER_LIST,SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING);
-				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE); 
-				goto err;
-				}
-			s->s3->send_connection_binding = 1;
-			p += n;
-#ifdef OPENSSL_RI_DEBUG
-			fprintf(stderr, "SCSV received by server\n");
-#endif
-			continue;
-			}
-
 		c=ssl_get_cipher_by_char(s,p);
 		p+=n;
 		if (c != NULL)
@@ -1383,29 +1303,6 @@ err:
 		sk_SSL_CIPHER_free(sk);
 	return(NULL);
 	}
-
-#ifndef OPENSSL_NO_TLSEXT
-/** return a servername extension value if provided in Client Hello, or NULL.
- * So far, only host_name types are defined (RFC 3546).
- */
-
-const char *SSL_get_servername(const SSL *s, const int type)
-	{
-	if (type != TLSEXT_NAMETYPE_host_name)
-		return NULL;
-
-	return s->session && !s->tlsext_hostname ?
-		s->session->tlsext_hostname :
-		s->tlsext_hostname;
-	}
-
-int SSL_get_servername_type(const SSL *s)
-	{
-	if (s->session && (!s->tlsext_hostname ? s->session->tlsext_hostname : s->tlsext_hostname))
-		return TLSEXT_NAMETYPE_host_name;
-	return -1;
-	}
-#endif
 
 unsigned long SSL_SESSION_hash(const SSL_SESSION *a)
 	{
@@ -1564,45 +1461,6 @@ SSL_CTX *SSL_CTX_new(SSL_METHOD *meth)
 	ret->extra_certs=NULL;
 	ret->comp_methods=SSL_COMP_get_compression_methods();
 
-#ifndef OPENSSL_NO_TLSEXT
-	ret->tlsext_servername_callback = 0;
-	ret->tlsext_servername_arg = NULL;
-	/* Setup RFC4507 ticket keys */
-	if ((RAND_pseudo_bytes(ret->tlsext_tick_key_name, 16) <= 0)
-		|| (RAND_bytes(ret->tlsext_tick_hmac_key, 16) <= 0)
-		|| (RAND_bytes(ret->tlsext_tick_aes_key, 16) <= 0))
-		ret->options |= SSL_OP_NO_TICKET;
-
-	ret->tlsext_status_cb = 0;
-	ret->tlsext_status_arg = NULL;
-
-#endif
-
-#ifndef OPENSSL_NO_ENGINE
-	ret->client_cert_engine = NULL;
-#ifdef OPENSSL_SSL_CLIENT_ENGINE_AUTO
-#define eng_strx(x)	#x
-#define eng_str(x)	eng_strx(x)
-	/* Use specific client engine automatically... ignore errors */
-	{
-	ENGINE *eng;
-	eng = ENGINE_by_id(eng_str(OPENSSL_SSL_CLIENT_ENGINE_AUTO));
-	if (!eng)
-		{
-		ERR_clear_error();
-		ENGINE_load_builtin_engines();
-		eng = ENGINE_by_id(eng_str(OPENSSL_SSL_CLIENT_ENGINE_AUTO));
-		}
-	if (!eng || !SSL_CTX_set_client_cert_engine(ret, eng))
-		ERR_clear_error();
-	}
-#endif
-#endif
-	/* Default is to connect to non-RI servers. When RI is more widely
-	 * deployed might change this.
-	 */
-	ret->options |= SSL_OP_LEGACY_SERVER_CONNECT;
-
 	return(ret);
 err:
 	SSLerr(SSL_F_SSL_CTX_NEW,ERR_R_MALLOC_FAILURE);
@@ -1672,10 +1530,6 @@ void SSL_CTX_free(SSL_CTX *a)
 		sk_SSL_COMP_pop_free(a->comp_methods,SSL_COMP_free);
 #else
 	a->comp_methods = NULL;
-#endif
-#ifndef OPENSSL_NO_ENGINE
-	if (a->client_cert_engine)
-		ENGINE_finish(a->client_cert_engine);
 #endif
 	OPENSSL_free(a);
 	}
@@ -1940,13 +1794,15 @@ int check_srvr_ecc_cert_and_alg(X509 *x, SSL_CIPHER *cs)
 /* THIS NEEDS CLEANING UP */
 X509 *ssl_get_server_send_cert(SSL *s)
 	{
-	unsigned long alg,kalg;
+	unsigned long alg,mask,kalg;
 	CERT *c;
-	int i;
+	int i,is_export;
 
 	c=s->cert;
 	ssl_set_cert_masks(c, s->s3->tmp.new_cipher);
 	alg=s->s3->tmp.new_cipher->algorithms;
+	is_export=SSL_C_IS_EXPORT(s->s3->tmp.new_cipher);
+	mask=is_export?c->export_mask:c->mask;
 	kalg=alg&(SSL_MKEY_MASK|SSL_AUTH_MASK);
 
 	if (kalg & SSL_kECDH)
@@ -2551,24 +2407,6 @@ int SSL_version(const SSL *s)
 
 SSL_CTX *SSL_get_SSL_CTX(const SSL *ssl)
 	{
-	return(ssl->ctx);
-	}
-
-SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX* ctx)
-	{
-	if (ssl->ctx == ctx)
-		return ssl->ctx;
-#ifndef OPENSSL_NO_TLSEXT
-	if (ctx == NULL)
-		ctx = ssl->initial_ctx;
-#endif
-	if (ssl->cert != NULL)
-		ssl_cert_free(ssl->cert);
-	ssl->cert = ssl_cert_dup(ctx->cert);
-	CRYPTO_add(&ctx->references,1,CRYPTO_LOCK_SSL_CTX);
-	if (ssl->ctx != NULL)
-		SSL_CTX_free(ssl->ctx); /* decrement reference count */
-	ssl->ctx = ctx;
 	return(ssl->ctx);
 	}
 

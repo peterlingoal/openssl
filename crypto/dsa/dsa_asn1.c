@@ -1,5 +1,5 @@
 /* dsa_asn1.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2000.
  */
 /* ====================================================================
@@ -61,12 +61,7 @@
 #include <openssl/dsa.h>
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
-#include <openssl/bn.h>
-#include <openssl/rand.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 
 /* Override the default new methods */
 static int sig_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
@@ -156,7 +151,6 @@ int DSA_sign(int type, const unsigned char *dgst, int dlen, unsigned char *sig,
 		return 0;
 		}
 #endif
-	RAND_seed(dgst, dlen);
 	s=DSA_do_sign(dgst,dlen,dsa);
 	if (s == NULL)
 		{

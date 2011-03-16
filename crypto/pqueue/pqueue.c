@@ -166,13 +166,14 @@ pqueue_pop(pqueue_s *pq)
 pitem *
 pqueue_find(pqueue_s *pq, PQ_64BIT priority)
 	{
-	pitem *next;
+	pitem *next, *prev = NULL;
 	pitem *found = NULL;
 
 	if ( pq->items == NULL)
 		return NULL;
 
-	for ( next = pq->items; next->next != NULL; next = next->next)
+	for ( next = pq->items; next->next != NULL; 
+		  prev = next, next = next->next)
 		{
 		if ( pq_64bit_eq(&(next->priority), &priority))
 			{
@@ -187,6 +188,13 @@ pqueue_find(pqueue_s *pq, PQ_64BIT priority)
 
 	if ( ! found)
 		return NULL;
+
+#if 0 /* find works in peek mode */
+	if ( prev == NULL)
+		pq->items = next->next;
+	else
+		prev->next = next->next;
+#endif
 
 	return found;
 	}
@@ -226,17 +234,3 @@ pqueue_next(pitem **item)
 
 	return ret;
 	}
-
-int
-pqueue_size(pqueue_s *pq)
-{
-	pitem *item = pq->items;
-	int count = 0;
-	
-	while(item != NULL)
-	{
-		count++;
-		item = item->next;
-	}
-	return count;
-}

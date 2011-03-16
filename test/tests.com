@@ -6,17 +6,11 @@ $	__proc = f$element(0,";",f$environment("procedure"))
 $	__here = f$parse(f$parse("A.;",__proc) - "A.;","[]A.;") - "A.;"
 $	__save_default = f$environment("default")
 $	__arch := VAX
-$	if f$getsyi("cpu") .ge. 128 then -
-	   __arch = f$edit( f$getsyi( "ARCH_NAME"), "UPCASE")
-$	if __arch .eqs. "" then __arch := UNK
+$	if f$getsyi("cpu") .ge. 128 then __arch := AXP
 $	texe_dir := sys$disk:[-.'__arch'.exe.test]
 $	exe_dir := sys$disk:[-.'__arch'.exe.apps]
 $
-$	sslroot = f$parse("sys$disk:[-.apps];",,,,"syntax_only") - "].;"+ ".]"
-$	define /translation_attributes = concealed sslroot 'sslroot'
-$
 $	set default '__here'
-$
 $	on control_y then goto exit
 $	on error then goto exit
 $
@@ -24,9 +18,6 @@ $	if p1 .nes. ""
 $	then
 $	    tests = p1
 $	else
-$! NOTE: This list reflects the list of dependencies following the
-$! "alltests" target in Makefile.  This should make it easy to see
-$! if there's a difference that needs to be taken care of.
 $	    tests := -
 	test_des,test_idea,test_sha,test_md4,test_md5,test_hmac,-
 	test_md2,test_mdc2,-
@@ -34,7 +25,7 @@ $	    tests := -
 	test_rand,test_bn,test_ec,test_ecdsa,test_ecdh,-
 	test_enc,test_x509,test_rsa,test_crl,test_sid,-
 	test_gen,test_req,test_pkcs7,test_verify,test_dh,test_dsa,-
-	test_ss,test_ca,test_engine,test_evp,test_ssl,test_ige,test_jpake
+	test_ss,test_ca,test_engine,test_evp,test_ssl
 $	endif
 $	tests = f$edit(tests,"COLLAPSE")
 $
@@ -66,8 +57,6 @@ $	SSLTEST :=	ssltest
 $	RSATEST :=	rsa_test
 $	ENGINETEST :=	enginetest
 $	EVPTEST :=	evp_test
-$	IGETEST :=	igetest
-$	JPAKETEST :=	jpaketest
 $
 $	tests_i = 0
 $ loop_tests:
@@ -261,17 +250,8 @@ $ test_rd:
 $	write sys$output "test Rijndael"
 $	!mcr 'texe_dir''rdtest'
 $	return
-$ test_ige: 
-$	write sys$output "Test IGE mode"
-$	mcr 'texe_dir''igetest'
-$	return
-$ test_jpake: 
-$	write sys$output "Test JPAKE"
-$	mcr 'texe_dir''jpaketest'
-$	return
 $
 $
 $ exit:
 $	set default '__save_default'
-$	deassign sslroot
 $	exit

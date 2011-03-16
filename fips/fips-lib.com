@@ -9,7 +9,7 @@ $!  Changes by Richard Levitte <richard@levitte.org>
 $!
 $!  This command files compiles and creates the FIPS parts of the
 $!  "[.xxx.EXE.CRYPTO]LIBCRYPTO.OLB" library for OpenSSL.  The "xxx"
-$!  denotes the machine architecture of ALPHA, IA64 or VAX.
+$!  denotes the machine architecture of AXP or VAX.
 $!
 $!  It was re-written so it would try to determine what "C" compiler to use 
 $!  or you can specify which "C" compiler to use.
@@ -52,23 +52,22 @@ $! (That Is, If We Need To Link To One.)
 $!
 $ TCPIP_LIB = ""
 $!
-$! Check What Architecture We Are Using.
+$! Check Which Architecture We Are Using.
 $!
-$ IF (F$GETSYI("CPU").LT.128)
+$ IF (F$GETSYI("CPU").GE.128)
 $ THEN
 $!
-$!  The Architecture Is VAX.
+$!  The Architecture Is AXP
 $!
-$   ARCH := VAX
+$   ARCH := AXP
 $!
 $! Else...
 $!
 $ ELSE
 $!
-$!  The Architecture Is Alpha, IA64 or whatever comes in the future.
+$!  The Architecture Is VAX.
 $!
-$   ARCH = F$EDIT( F$GETSYI( "ARCH_NAME"), "UPCASE")
-$   IF (ARCH .EQS. "") THEN ARCH = "UNK"
+$   ARCH := VAX
 $!
 $! End The Architecture Check.
 $!
@@ -77,14 +76,6 @@ $!
 $! Define The Different Encryption Types.
 $!
 $ ENCRYPT_TYPES = "Basic,SHA,RAND,DES,AES,DSA,RSA,DH,HMAC"
-$!
-$! Define The OBJ Directory.
-$!
-$ OBJ_DIR := SYS$DISK:[-.'ARCH'.OBJ.CRYPTO]
-$!
-$! Define The EXE Directory.
-$!
-$ EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]
 $!
 $! Check To Make Sure We Have Valid Command Line Parameters.
 $!
@@ -98,6 +89,10 @@ $! Tell The User What Kind of Machine We Run On.
 $!
 $ WRITE SYS$OUTPUT "Compiling On A ",ARCH," Machine."
 $!
+$! Define The OBJ Directory.
+$!
+$ OBJ_DIR := SYS$DISK:[-.'ARCH'.OBJ.CRYPTO]
+$!
 $! Check To See If The Architecture Specific OBJ Directory Exists.
 $!
 $ IF (F$PARSE(OBJ_DIR).EQS."")
@@ -110,6 +105,10 @@ $!
 $! End The Architecture Specific OBJ Directory Check.
 $!
 $ ENDIF
+$!
+$! Define The EXE Directory.
+$!
+$ EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]
 $!
 $! Check To See If The Architecture Specific Directory Exists.
 $!
@@ -572,7 +571,7 @@ $!
 $   IF (F$SEARCH(OPT_FILE).EQS."")
 $   THEN
 $!
-$!    Figure Out If We Need A non-VAX Or A VAX Linker Option File.
+$!    Figure Out If We Need An AXP Or A VAX Linker Option File.
 $!
 $     IF ARCH .EQS. "VAX"
 $     THEN
@@ -592,19 +591,19 @@ $!    Else...
 $!
 $     ELSE
 $!
-$!      Create The non-VAX Linker Option File.
+$!      Create The AXP Linker Option File.
 $!
 $       CREATE 'OPT_FILE'
 $DECK
 !
-! Default System Options File For non-VAX To Link Agianst 
+! Default System Options File For AXP To Link Agianst 
 ! The Sharable C Runtime Library.
 !
 SYS$SHARE:CMA$OPEN_LIB_SHR/SHARE
 SYS$SHARE:CMA$OPEN_RTL/SHARE
 $EOD
 $!
-$!    End The DEC C Option File Check.
+$!    End The VAX/AXP DEC C Option File Check.
 $!
 $     ENDIF
 $!
@@ -665,9 +664,8 @@ $     WRITE SYS$OUTPUT "    APPS     :  To Compile Just The [.xxx.EXE.CRYPTO]*.E
 $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT " Where 'xxx' Stands For:"
 $     WRITE SYS$OUTPUT ""
-$     WRITE SYS$OUTPUT "    ALPHA    :  Alpha Architecture."
-$     WRITE SYS$OUTPUT "    IA64     :  IA64 Architecture."
-$     WRITE SYS$OUTPUT "    VAX      :  VAX Architecture."
+$     WRITE SYS$OUTPUT "        AXP  :  Alpha Architecture."
+$     WRITE SYS$OUTPUT "        VAX  :  VAX Architecture."
 $     WRITE SYS$OUTPUT ""
 $!
 $!    Time To EXIT.
@@ -792,7 +790,7 @@ $   ELSE
 $!
 $!    Check To See If We Have VAXC Or DECC.
 $!
-$     IF (ARCH.NES."VAX").OR.(F$TRNLNM("DECC$CC_DEFAULT").NES."")
+$     IF (ARCH.EQS."AXP").OR.(F$TRNLNM("DECC$CC_DEFAULT").NES."")
 $     THEN 
 $!
 $!      Looks Like DECC, Set To Use DECC.
@@ -903,7 +901,7 @@ $     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89" + -
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "''EXE_DIR'VAX_DECC_OPTIONS.OPT"
+$     OPT_FILE = "SYS$DISK:[]VAX_DECC_OPTIONS.OPT"
 $!
 $!  End DECC Check.
 $!
@@ -925,9 +923,9 @@ $!
 $!    Compile Using VAXC.
 $!
 $     CC = "CC"
-$     IF ARCH.NES."VAX"
+$     IF ARCH.EQS."AXP"
 $     THEN
-$	WRITE SYS$OUTPUT "There is no VAX C on ''ARCH'!"
+$	WRITE SYS$OUTPUT "There is no VAX C on Alpha!"
 $	EXIT
 $     ENDIF
 $     IF F$TRNLNM("DECC$CC_DEFAULT").EQS."/DECC" THEN CC = "CC/VAXC"
@@ -942,7 +940,7 @@ $     DEFINE/NOLOG SYS SYS$COMMON:[SYSLIB]
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "''EXE_DIR'VAX_VAXC_OPTIONS.OPT"
+$     OPT_FILE = "SYS$DISK:[]VAX_VAXC_OPTIONS.OPT"
 $!
 $!  End VAXC Check
 $!
@@ -969,7 +967,7 @@ $     CC = "GCC/NOCASE_HACK/''GCC_OPTIMIZE'/''DEBUGGER'/NOLIST" + -
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "''EXE_DIR'VAX_GNUC_OPTIONS.OPT"
+$     OPT_FILE = "SYS$DISK:[]VAX_GNUC_OPTIONS.OPT"
 $!
 $!  End The GNU C Check.
 $!
@@ -1039,7 +1037,7 @@ $!
 $! Build a MACRO command for the architecture at hand
 $!
 $ IF ARCH .EQS. "VAX" THEN MACRO = "MACRO/''DEBUGGER'"
-$ IF ARCH .NES. "VAX" THEN MACRO = "MACRO/MIGRATION/''DEBUGGER'/''MACRO_OPTIMIZE'"
+$ IF ARCH .EQS. "AXP" THEN MACRO = "MACRO/MIGRATION/''DEBUGGER'/''MACRO_OPTIMIZE'"
 $!
 $!  Show user the result
 $!

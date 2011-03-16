@@ -84,7 +84,7 @@ int MAIN(int argc, char **argv)
 	{
 	ENGINE *e = NULL;
 	unsigned char *buf=NULL;
-	int i,err=1;
+	int i,err=0;
 	const EVP_MD *md=NULL,*m;
 	BIO *in=NULL,*inp;
 	BIO *bmd=NULL;
@@ -215,8 +215,6 @@ ERR_load_crypto_strings();
 			debug=1;
 		else if (strcmp(*argv,"-non-fips-allow") == 0)
 			non_fips_allow=1;
-		else if (!strcmp(*argv,"-fips-fingerprint"))
-			hmac_key = "etaonrishdlcupfm";
 		else if (!strcmp(*argv,"-hmac"))
 			{
 			if (--argc < 1)
@@ -254,7 +252,6 @@ ERR_load_crypto_strings();
 		BIO_printf(bio_err,"-keyform arg    key file format (PEM or ENGINE)\n");
 		BIO_printf(bio_err,"-signature file signature to verify\n");
 		BIO_printf(bio_err,"-binary         output in binary form\n");
-		BIO_printf(bio_err,"-hmac key       create hashed MAC with key\n");
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err,"-engine e       use engine e, possibly a hardware device.\n");
 #endif
@@ -415,7 +412,6 @@ ERR_load_crypto_strings();
 	else
 		{
 		name=OBJ_nid2sn(md->type);
-		err = 0;
 		for (i=0; i<argc; i++)
 			{
 			char *tmp,*tofree=NULL;

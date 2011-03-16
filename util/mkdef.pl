@@ -69,7 +69,7 @@ my $do_ctestall = 0;
 my $do_checkexist = 0;
 
 my $VMSVAX=0;
-my $VMSNonVAX=0;
+my $VMSAlpha=0;
 my $VMS=0;
 my $W32=0;
 my $W16=0;
@@ -78,8 +78,8 @@ my $OS2=0;
 # Set this to make typesafe STACK definitions appear in DEF
 my $safe_stack_def = 0;
 
-my @known_platforms = ( "__FreeBSD__", "PERL5", "NeXT", "NETWARE",
-			"EXPORT_VAR_AS_FUNCTION", "ZLIB", "OPENSSL_FIPS"); 
+my @known_platforms = ( "__FreeBSD__", "PERL5", "NeXT",
+			"EXPORT_VAR_AS_FUNCTION", "OPENSSL_FIPS" );
 my @known_ossl_platforms = ( "VMS", "WIN16", "WIN32", "WINNT", "OS2" );
 my @known_algorithms = ( "RC2", "RC4", "RC5", "IDEA", "DES", "BF",
 			 "CAST", "MD2", "MD4", "MD5", "SHA", "SHA0", "SHA1",
@@ -96,14 +96,6 @@ my @known_algorithms = ( "RC2", "RC4", "RC5", "IDEA", "DES", "BF",
 			 "STATIC_ENGINE", "ENGINE", "HW", "GMP",
 			 # RFC3779 support 
 			 "RFC3779",
-			 # TLS extension support
-			 "TLSEXT",
-			 # CMS
-			 "CMS",
-			 # CryptoAPI Engine
-			 "CAPIENG",
-			 # JPAKE
-			 "JPAKE",
 			 # Deprecated functions
 			 "DEPRECATED" );
 
@@ -124,7 +116,7 @@ my $no_rsa; my $no_dsa; my $no_dh; my $no_hmac=0; my $no_aes; my $no_krb5;
 my $no_ec; my $no_ecdsa; my $no_ecdh; my $no_engine; my $no_hw; my $no_camellia;
 my $no_seed;
 my $no_fp_api; my $no_static_engine; my $no_gmp; my $no_deprecated;
-my $no_rfc3779; my $no_tlsext; my $no_cms; my $no_capieng; my $no_jpake;
+my $no_rfc3779;
 my $fips;
 
 
@@ -141,18 +133,13 @@ foreach (@ARGV, split(/ /, $options))
 		$VMS=1;
 		$VMSVAX=1;
 	}
-	if ($_ eq "VMS-NonVAX") {
+	if ($_ eq "VMS-Alpha") {
 		$VMS=1;
-		$VMSNonVAX=1;
+		$VMSAlpha=1;
 	}
 	$VMS=1 if $_ eq "VMS";
 	$OS2=1 if $_ eq "OS2";
 	$fips=1 if /^fips/;
-
-	if ($_ eq "zlib" || $_ eq "zlib-dynamic"
- 			 || $_ eq "enable-zlib-dynamic") {
- 		$zlib = 1;
-	}
 
 	$do_ssl=1 if $_ eq "ssleay";
 	if ($_ eq "ssl") {
@@ -210,10 +197,6 @@ foreach (@ARGV, split(/ /, $options))
 	elsif (/^no-hw$/)	{ $no_hw=1; }
 	elsif (/^no-gmp$/)	{ $no_gmp=1; }
 	elsif (/^no-rfc3779$/)	{ $no_rfc3779=1; }
-	elsif (/^no-tlsext$/)	{ $no_tlsext=1; }
-	elsif (/^no-cms$/)	{ $no_cms=1; }
-	elsif (/^no-capieng$/)	{ $no_capieng=1; }
-	elsif (/^no-jpake$/)	{ $no_jpake=1; }
 	}
 
 
@@ -249,7 +232,6 @@ $max_crypto = $max_num;
 
 my $ssl="ssl/ssl.h";
 $ssl.=" ssl/kssl.h";
-$ssl.=" ssl/tls1.h";
 
 my $crypto ="crypto/crypto.h";
 $crypto.=" crypto/o_dir.h";
@@ -309,8 +291,6 @@ $crypto.=" crypto/krb5/krb5_asn.h";
 $crypto.=" crypto/tmdiff.h";
 $crypto.=" crypto/store/store.h";
 $crypto.=" crypto/pqueue/pqueue.h";
-$crypto.=" crypto/cms/cms.h";
-$crypto.=" crypto/jpake/jpake.h";
 $crypto.=" fips/fips.h fips/rand/fips_rand.h";
 
 my $symhacks="crypto/symhacks.h";
@@ -962,21 +942,6 @@ sub do_defs
 	$platform{"PEM_read_P8_PRIV_KEY_INFO"} = "VMS";
 	$platform{"PEM_write_P8_PRIV_KEY_INFO"} = "VMS";
 
-	$platform{"EVP_sha384"} = "!VMSVAX";
-	$platform{"EVP_sha512"} = "!VMSVAX";
-	$platform{"SHA384_Init"} = "!VMSVAX";
-	$platform{"SHA384_Transform"} = "!VMSVAX";
-	$platform{"SHA384_Update"} = "!VMSVAX";
-	$platform{"SHA384_Final"} = "!VMSVAX";
-	$platform{"SHA384"} = "!VMSVAX";
-	$platform{"SHA512_Init"} = "!VMSVAX";
-	$platform{"SHA512_Transform"} = "!VMSVAX";
-	$platform{"SHA512_Update"} = "!VMSVAX";
-	$platform{"SHA512_Final"} = "!VMSVAX";
-	$platform{"SHA512"} = "!VMSVAX";
-
-	$platform{"pqueue_print"} = "!VMSVAX";
-
 	# Info we know about
 
 	push @ret, map { $_."\\".&info_string($_,"EXIST",
@@ -1101,8 +1066,6 @@ sub is_valid
 		if ($platforms) {
 			# platforms
 			if ($keyword eq "VMS" && $VMS) { return 1; }
-			if ($keyword eq "VMSVAX" && $VMSVAX) { return 1; }
-			if ($keyword eq "VMSNonVAX" && $VMSNonVAX) { return 1; }
 			if ($keyword eq "WIN32" && $W32) { return 1; }
 			if ($keyword eq "WIN16" && $W16) { return 1; }
 			if ($keyword eq "WINNT" && $NT) { return 1; }
@@ -1117,7 +1080,6 @@ sub is_valid
 			if ($keyword eq "OPENSSL_FIPS" && $fips) {
 				return 1;
 			}
-			if ($keyword eq "ZLIB" && $zlib) { return 1; }
 			return 0;
 		} else {
 			# algorithms
@@ -1159,10 +1121,6 @@ sub is_valid
 			if ($keyword eq "STATIC_ENGINE" && $no_static_engine) { return 0; }
 			if ($keyword eq "GMP" && $no_gmp) { return 0; }
 			if ($keyword eq "RFC3779" && $no_rfc3779) { return 0; }
-			if ($keyword eq "TLSEXT" && $no_tlsext) { return 0; }
-			if ($keyword eq "CMS" && $no_cms) { return 0; }
-			if ($keyword eq "CAPIENG" && $no_capieng) { return 0; }
-			if ($keyword eq "JPAKE" && $no_jpake) { return 0; }
 			if ($keyword eq "DEPRECATED" && $no_deprecated) { return 0; }
 
 			# Nothing recognise as true

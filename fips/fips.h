@@ -49,10 +49,6 @@
 
 #include <openssl/opensslconf.h>
 
-#ifndef OPENSSL_FIPS
-#error FIPS is disabled.
-#endif
-
 #ifdef OPENSSL_FIPS
 
 #ifdef  __cplusplus

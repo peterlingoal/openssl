@@ -59,7 +59,7 @@ s512sse2-out.s:     asm/sha512-sse2.pl ../perlasm/x86asm.pl
 	(cd asm; $(PERL) sha512-sse2.pl a.out $(CFLAGS) $(PROCESSOR) > ../$@)
 
 sha1-ia64.s:   asm/sha1-ia64.pl
-	(cd asm; $(PERL) sha1-ia64.pl ../$@ $(CFLAGS))
+	(cd asm; $(PERL) sha1-ia64.pl $(CFLAGS) ) > $@
 sha256-ia64.s: asm/sha512-ia64.pl
 	(cd asm; $(PERL) sha512-ia64.pl ../$@ $(CFLAGS))
 sha512-ia64.s: asm/sha512-ia64.pl
@@ -69,6 +69,10 @@ sha512-ia64.s: asm/sha512-ia64.pl
 sha1-x86_64.s:	asm/sha1-x86_64.pl;	$(PERL) asm/sha1-x86_64.pl $@
 sha256-x86_64.s:asm/sha512-x86_64.pl;	$(PERL) asm/sha512-x86_64.pl $@
 sha512-x86_64.s:asm/sha512-x86_64.pl;	$(PERL) asm/sha512-x86_64.pl $@
+# GNU make "catch all"
+sha1-%.s:	asm/sha1-%.pl;		$(PERL) $< $@
+sha256-%.s:	asm/sha512-%.pl;	$(PERL) $< $@
+sha512-%.s:	asm/sha512-%.pl;	$(PERL) $< $@
 
 files:
 	$(PERL) $(TOP)/util/files.pl Makefile >> $(TOP)/MINFO
@@ -113,8 +117,7 @@ sha1_one.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
 sha1_one.o: ../../include/openssl/safestack.h ../../include/openssl/sha.h
 sha1_one.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
 sha1_one.o: sha1_one.c
-sha1dgst.o: ../../include/openssl/e_os2.h ../../include/openssl/fips.h
-sha1dgst.o: ../../include/openssl/opensslconf.h
+sha1dgst.o: ../../include/openssl/e_os2.h ../../include/openssl/opensslconf.h
 sha1dgst.o: ../../include/openssl/opensslv.h ../../include/openssl/sha.h
 sha1dgst.o: ../md32_common.h sha1dgst.c sha_locl.h
 sha256.o: ../../include/openssl/crypto.h ../../include/openssl/e_os2.h

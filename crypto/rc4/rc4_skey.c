@@ -60,10 +60,7 @@
 #include "rc4_locl.h"
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 
 const char RC4_version[]="RC4" OPENSSL_VERSION_PTEXT;
 
@@ -90,11 +87,7 @@ const char *RC4_options(void)
  * Date: Wed, 14 Sep 1994 06:35:31 GMT
  */
 
-#ifdef OPENSSL_FIPS
-void private_RC4_set_key(RC4_KEY *key, int len, const unsigned char *data)
-#else
-void RC4_set_key(RC4_KEY *key, int len, const unsigned char *data)
-#endif
+FIPS_NON_FIPS_VCIPHER_Init(RC4)
 	{
         register RC4_INT tmp;
         register int id1,id2;
@@ -128,12 +121,11 @@ void RC4_set_key(RC4_KEY *key, int len, const unsigned char *data)
 		 * implementations suffer from significant performance
 		 * losses then, e.g. PIII exhibits >2x deterioration,
 		 * and so does Opteron. In order to assure optimal
-		 * all-round performance, we detect P4 at run-time by
-		 * checking upon reserved bit 20 in CPU capability
+		 * all-round performance, let us [try to] detect P4 at
+		 * run-time by checking upon HTT bit in CPU capability
 		 * vector and set up compressed key schedule, which is
 		 * recognized by correspondingly updated assembler
-		 * module... Bit 20 is set up by OPENSSL_ia32_cpuid.
-		 *
+		 * module...
 		 *				<appro@fy.chalmers.se>
 		 */
 #ifdef OPENSSL_FIPS

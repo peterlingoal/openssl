@@ -100,6 +100,9 @@ int MAIN(int, char **);
 
 int MAIN(int argc, char **argv)
 	{
+#ifndef OPENSSL_NO_ENGINE
+	ENGINE *e = NULL;
+#endif
 	static const char magic[]="Salted__";
 	char mbuf[sizeof magic-1];
 	char *strbuf=NULL;
@@ -223,12 +226,7 @@ int MAIN(int argc, char **argv)
 				goto bad;
 				}
 			buf[0]='\0';
-			if (!fgets(buf,sizeof buf,infile))
-				{
-				BIO_printf(bio_err,"unable to read key from '%s'\n",
-					file);
-				goto bad;
-				}
+			fgets(buf,sizeof buf,infile);
 			fclose(infile);
 			i=strlen(buf);
 			if ((i > 0) &&
@@ -308,7 +306,7 @@ bad:
 		}
 
 #ifndef OPENSSL_NO_ENGINE
-        setup_engine(bio_err, engine, 0);
+        e = setup_engine(bio_err, engine, 0);
 #endif
 
 	if (md && (dgst=EVP_get_digestbyname(md)) == NULL)
@@ -535,8 +533,7 @@ bad:
 			BIO_printf(bio_err,"invalid hex iv value\n");
 			goto end;
 			}
-		if ((hiv == NULL) && (str == NULL)
-		    && EVP_CIPHER_iv_length(cipher) != 0)
+		if ((hiv == NULL) && (str == NULL))
 			{
 			/* No IV was explicitly set and no IV was generated
 			 * during EVP_BytesToKey. Hence the IV is undefined,

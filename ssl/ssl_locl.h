@@ -124,9 +124,7 @@
 #include "e_os.h"
 
 #include <openssl/buffer.h>
-#ifndef OPENSSL_NO_COMP
 #include <openssl/comp.h>
-#endif
 #include <openssl/bio.h>
 #include <openssl/stack.h>
 #ifndef OPENSSL_NO_RSA
@@ -334,7 +332,7 @@
 #define SSL_HIGH		0x00000080L
 #define SSL_FIPS		0x00000100L
 
-/* we have used 000001ff - 23 bits left to go */
+/* we have used 000000ff - 24 bits left to go */
 
 /*
  * Macros to check the export status and cipher strength for export ciphers.
@@ -502,7 +500,6 @@ typedef struct ssl3_enc_method
 	int (*alert_value)(int);
 	} SSL3_ENC_METHOD;
 
-#ifndef OPENSSL_NO_COMP
 /* Used for holding the relevant compression methods loaded into SSL_CTX */
 typedef struct ssl3_comp_st
 	{
@@ -510,7 +507,6 @@ typedef struct ssl3_comp_st
 	char *name;	/* Text name used for the compression type */
 	COMP_METHOD *method; /* The method :-) */
 	} SSL3_COMP;
-#endif
 
 extern SSL3_ENC_METHOD ssl3_undef_enc_method;
 OPENSSL_EXTERN SSL_CIPHER ssl2_ciphers[];
@@ -694,13 +690,13 @@ SSL_METHOD *func_name(void)  \
 		dtls1_read_bytes, \
 		dtls1_write_app_data_bytes, \
 		dtls1_dispatch_alert, \
-		dtls1_ctrl, \
+		ssl3_ctrl, \
 		ssl3_ctx_ctrl, \
 		ssl3_get_cipher_by_char, \
 		ssl3_put_cipher_by_char, \
 		ssl3_pending, \
 		ssl3_num_ciphers, \
-		dtls1_get_cipher, \
+		ssl3_get_cipher, \
 		s_get_meth, \
 		dtls1_default_timeout, \
 		&DTLSv1_enc_data, \
@@ -721,7 +717,7 @@ SESS_CERT *ssl_sess_cert_new(void);
 void ssl_sess_cert_free(SESS_CERT *sc);
 int ssl_set_peer_cert_type(SESS_CERT *c, int type);
 int ssl_get_new_session(SSL *s, int session);
-int ssl_get_prev_session(SSL *s, unsigned char *session,int len, const unsigned char *limit);
+int ssl_get_prev_session(SSL *s, unsigned char *session,int len);
 int ssl_cipher_id_cmp(const SSL_CIPHER *a,const SSL_CIPHER *b);
 int ssl_cipher_ptr_id_cmp(const SSL_CIPHER * const *ap,
 			const SSL_CIPHER * const *bp);
@@ -781,15 +777,13 @@ SSL_CIPHER *ssl3_get_cipher_by_char(const unsigned char *p);
 int ssl3_put_cipher_by_char(const SSL_CIPHER *c,unsigned char *p);
 void ssl3_init_finished_mac(SSL *s);
 int ssl3_send_server_certificate(SSL *s);
-int ssl3_send_newsession_ticket(SSL *s);
-int ssl3_send_cert_status(SSL *s);
 int ssl3_get_finished(SSL *s,int state_a,int state_b);
 int ssl3_setup_key_block(SSL *s);
 int ssl3_send_change_cipher_spec(SSL *s,int state_a,int state_b);
 int ssl3_change_cipher_state(SSL *s,int which);
 void ssl3_cleanup_key_block(SSL *s);
 int ssl3_do_write(SSL *s,int type);
-int ssl3_send_alert(SSL *s,int level, int desc);
+void ssl3_send_alert(SSL *s,int level, int desc);
 int ssl3_generate_master_secret(SSL *s, unsigned char *out,
 	unsigned char *p, int len);
 int ssl3_get_req_cert_type(SSL *s,unsigned char *p);
@@ -862,40 +856,24 @@ int dtls1_read_failed(SSL *s, int code);
 int dtls1_buffer_message(SSL *s, int ccs);
 int dtls1_retransmit_message(SSL *s, unsigned short seq, 
 	unsigned long frag_off, int *found);
-int dtls1_get_queue_priority(unsigned short seq, int is_ccs);
-int dtls1_retransmit_buffered_messages(SSL *s);
 void dtls1_clear_record_buffer(SSL *s);
 void dtls1_get_message_header(unsigned char *data, struct hm_header_st *msg_hdr);
 void dtls1_get_ccs_header(unsigned char *data, struct ccs_header_st *ccs_hdr);
 void dtls1_reset_seq_numbers(SSL *s, int rw);
 long dtls1_default_timeout(void);
-struct timeval* dtls1_get_timeout(SSL *s, struct timeval* timeleft);
-int dtls1_handle_timeout(SSL *s);
-SSL_CIPHER *dtls1_get_cipher(unsigned int u);
-void dtls1_start_timer(SSL *s);
-void dtls1_stop_timer(SSL *s);
-int dtls1_is_timer_expired(SSL *s);
-void dtls1_double_timeout(SSL *s);
-int dtls1_send_newsession_ticket(SSL *s);
 
 
 /* some client-only functions */
 int ssl3_client_hello(SSL *s);
 int ssl3_get_server_hello(SSL *s);
 int ssl3_get_certificate_request(SSL *s);
-int ssl3_get_new_session_ticket(SSL *s);
-int ssl3_get_cert_status(SSL *s);
 int ssl3_get_server_done(SSL *s);
 int ssl3_send_client_verify(SSL *s);
-int ssl_do_client_cert_cb(SSL *s, X509 **px509, EVP_PKEY **ppkey);
 int ssl3_send_client_certificate(SSL *s);
 int ssl3_send_client_key_exchange(SSL *s);
 int ssl3_get_key_exchange(SSL *s);
 int ssl3_get_server_certificate(SSL *s);
 int ssl3_check_cert_and_algorithm(SSL *s);
-#ifndef OPENSSL_NO_TLSEXT
-int ssl3_check_finished(SSL *s);
-#endif
 
 int dtls1_client_hello(SSL *s);
 int dtls1_send_client_certificate(SSL *s);
@@ -970,34 +948,5 @@ int check_srvr_ecc_cert_and_alg(X509 *x, SSL_CIPHER *cs);
 
 SSL_COMP *ssl3_comp_find(STACK_OF(SSL_COMP) *sk, int n);
 
-#ifndef OPENSSL_NO_TLSEXT
-unsigned char *ssl_add_clienthello_tlsext(SSL *s, unsigned char *p, unsigned char *limit); 
-unsigned char *ssl_add_serverhello_tlsext(SSL *s, unsigned char *p, unsigned char *limit); 
-int ssl_parse_clienthello_tlsext(SSL *s, unsigned char **data, unsigned char *d, int n, int *al);
-int ssl_parse_serverhello_tlsext(SSL *s, unsigned char **data, unsigned char *d, int n, int *al);
-int ssl_prepare_clienthello_tlsext(SSL *s);
-int ssl_prepare_serverhello_tlsext(SSL *s);
-int ssl_check_clienthello_tlsext(SSL *s);
-int ssl_check_serverhello_tlsext(SSL *s);
-
-#ifdef OPENSSL_NO_SHA256
-#define tlsext_tick_md	EVP_sha1
-#else
-#define tlsext_tick_md	EVP_sha256
-#endif
-int tls1_process_ticket(SSL *s, unsigned char *session_id, int len,
-				const unsigned char *limit, SSL_SESSION **ret);
-EVP_MD_CTX* ssl_replace_hash(EVP_MD_CTX **hash,const EVP_MD *md) ;
-void ssl_clear_hash_ctx(EVP_MD_CTX **hash);
-
-int ssl_add_serverhello_renegotiate_ext(SSL *s, unsigned char *p, int *len,
-					int maxlen);
-int ssl_parse_serverhello_renegotiate_ext(SSL *s, unsigned char *d, int len,
-					  int *al);
-int ssl_add_clienthello_renegotiate_ext(SSL *s, unsigned char *p, int *len,
-					int maxlen);
-int ssl_parse_clienthello_renegotiate_ext(SSL *s, unsigned char *d, int len,
-					  int *al);
-#endif
 
 #endif

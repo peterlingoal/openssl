@@ -61,11 +61,8 @@
 #include "cryptlib.h"
 #include "rand_lcl.h"
 #include <openssl/rand.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
 #include <openssl/fips_rand.h>
-#endif
-
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif

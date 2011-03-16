@@ -11,8 +11,7 @@
 
 #ifndef OPENSSL_FIPS
 #include <stdio.h>
-
-int main(int argc, char **argv)
+int main()
 {
     printf("No FIPS RNG support\n");
     return 0;
@@ -31,7 +30,7 @@ int main(int argc, char **argv)
 
 #include "fips_utl.h"
 
-static void vst()
+void vst()
     {
     unsigned char *key = NULL;
     unsigned char *v = NULL;
@@ -108,7 +107,7 @@ static void vst()
 	}
     }
 
-static void mct()
+void mct()
     {
     unsigned char *key = NULL;
     unsigned char *v = NULL;

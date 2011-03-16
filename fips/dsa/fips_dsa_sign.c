@@ -1,5 +1,5 @@
 /* fips_dsa_sign.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2007.
  */
 /* ====================================================================
@@ -61,7 +61,6 @@
 #include <openssl/dsa.h>
 #include <openssl/err.h>
 #include <openssl/sha.h>
-#include <openssl/bn.h>
 
 #ifdef OPENSSL_FIPS
 
@@ -70,7 +69,6 @@
  * case of a DSA signature.
  */
 
-#if 0
 int FIPS_dsa_size(DSA *r)
 	{
 	int ilen;
@@ -84,7 +82,6 @@ int FIPS_dsa_size(DSA *r)
 	 */
 	return ilen * 2 + 6;
 	}
-#endif
 
 /* Tiny ASN1 encoder for DSA_SIG structure. We can assume r, s smaller than
  * 0x80 octets as by the DSA standards they will be less than 2^160

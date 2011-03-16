@@ -1,5 +1,5 @@
 /* fips_dsa_lib.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2007.
  */
 /* ====================================================================
@@ -58,7 +58,6 @@
 
 #include <string.h>
 #include <openssl/dsa.h>
-#include <openssl/bn.h>
 
 /* Minimal FIPS versions of FIPS_dsa_new() and FIPS_dsa_free: to
  * reduce external dependencies. 

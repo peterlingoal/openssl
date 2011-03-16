@@ -79,20 +79,14 @@ void ERR_print_errors_cb(int (*cb)(const char *str, size_t len, void *u),
 		ERR_error_string_n(l, buf, sizeof buf);
 		BIO_snprintf(buf2, sizeof(buf2), "%lu:%s:%s:%d:%s\n", es, buf,
 			file, line, (flags & ERR_TXT_STRING) ? data : "");
-		if (cb(buf2, strlen(buf2), u) <= 0)
-			break; /* abort outputting the error report */
+		cb(buf2, strlen(buf2), u);
 		}
 	}
 
 #ifndef OPENSSL_NO_FP_API
 static int print_fp(const char *str, size_t len, void *fp)
 	{
-	BIO bio;
-
-	BIO_set(&bio,BIO_s_file());
-	BIO_set_fp(&bio,fp,BIO_NOCLOSE);
-
-	return BIO_printf(&bio, "%s", str);
+	return fwrite(str, 1, len, fp);
 	}
 void ERR_print_errors_fp(FILE *fp)
 	{

@@ -27,10 +27,6 @@ $rm='del /Q';
 
 $zlib_lib="zlib1.lib";
 
-# Santize -L options for ms link
-$l_flags =~ s/-L("\[^"]+")/\/libpath:$1/g;
-$l_flags =~ s/-L(\S+)/\/libpath:$1/g;
-
 # C compiler stuff
 $cc='cl';
 if ($FLAVOR =~ /WIN64/)
@@ -49,10 +45,8 @@ if ($FLAVOR =~ /WIN64/)
     $base_cflags=' /W3 /Gs0 /GF /Gy /nologo -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32 -DOPENSSL_SYSNAME_WIN32 -DOPENSSL_SYSNAME_WINNT -DUNICODE -D_UNICODE';
     $base_cflags.=' -D_CRT_SECURE_NO_DEPRECATE';	# shut up VC8
     $base_cflags.=' -D_CRT_NONSTDC_NO_DEPRECATE';	# shut up VC8
-    my $f = $shlib || $fips ?' /MD':' /MT';
-    $lib_cflag='/Zl' if (!$shlib);	# remove /DEFAULTLIBs from static lib
-    $opt_cflags=$f.' /Ox';
-    $dbg_cflags=$f.'d /Od -DDEBUG -D_DEBUG';
+    $opt_cflags=' /MD /Ox';
+    $dbg_cflags=' /MDd /Od -DDEBUG -D_DEBUG';
     $lflags="/nologo /subsystem:console /opt:ref";
     }
 elsif ($FLAVOR =~ /CE/)
@@ -103,7 +97,7 @@ elsif ($FLAVOR =~ /CE/)
     }
 
     $cc='$(CC)';
-    $base_cflags=' /W3 /WX /GF /Gy /nologo -DUNICODE -D_UNICODE -DOPENSSL_SYSNAME_WINCE -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32 -DNO_CHMOD -I$(WCECOMPAT)/include -DOPENSSL_SMALL_FOOTPRINT';
+    $base_cflags=' /W3 /GF /Gy /nologo -DUNICODE -D_UNICODE -DOPENSSL_SYSNAME_WINCE -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32 -DNO_CHMOD -I$(WCECOMPAT)/include -DOPENSSL_SMALL_FOOTPRINT';
     $base_cflags.=" $wcecdefs";
     $opt_cflags=' /MC /O1i';	# optimize for space, but with intrinsics...
     $dbg_clfags=' /MC /Od -DDEBUG -D_DEBUG';
@@ -111,13 +105,11 @@ elsif ($FLAVOR =~ /CE/)
     }
 else	# Win32
     {
-    $base_cflags=' /W3 /WX /Gs0 /GF /Gy /nologo -DOPENSSL_SYSNAME_WIN32 -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32';
+    $base_cflags=' /W3 /Gs0 /GF /Gy /nologo -DOPENSSL_SYSNAME_WIN32 -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32';
     $base_cflags.=' -D_CRT_SECURE_NO_DEPRECATE';	# shut up VC8
     $base_cflags.=' -D_CRT_NONSTDC_NO_DEPRECATE';	# shut up VC8
-    my $f = $shlib || $fips ?' /MD':' /MT';
-    $lib_cflag='/Zl' if (!$shlib);	# remove /DEFAULTLIBs from static lib
-    $opt_cflags=$f.' /Ox /O2 /Ob2';
-    $dbg_cflags=$f.'d /Od -DDEBUG -D_DEBUG';
+    $opt_cflags=' /MD /Ox /O2 /Ob2';
+    $dbg_cflags=' /MDd /Od -DDEBUG -D_DEBUG';
     $lflags="/nologo /subsystem:console /opt:ref";
     }
 $mlflags='';
@@ -128,7 +120,7 @@ $inc_def="inc32";
 
 if ($debug)
 	{
-	$cflags=$dbg_cflags.$base_cflags.' /Zi';
+	$cflags=$dbg_cflags.$base_cflags;
 	$lflags.=" /debug";
 	$mlflags.=' /debug';
 	}
@@ -149,18 +141,6 @@ if ($no_sock)		{ $ex_libs=''; }
 elsif ($FLAVOR =~ /CE/)	{ $ex_libs='winsock.lib'; }
 else			{ $ex_libs='wsock32.lib'; }
 
-my $oflow;
-
-
-if ($FLAVOR =~ /WIN64/ and `cl 2>&1` =~ /14\.00\.4[0-9]{4}\./)
-	{
-	$oflow=' bufferoverflowu.lib';
-	}
-else
-	{
-	$oflow="";
-	}
-
 if ($FLAVOR =~ /CE/)
 	{
 	$ex_libs.=' $(WCECOMPAT)/lib/wcecompatex.lib';
@@ -168,9 +148,8 @@ if ($FLAVOR =~ /CE/)
 	}
 else
 	{
-	$ex_libs.=' gdi32.lib crypt32.lib advapi32.lib user32.lib';
-	$ex_libs.= $oflow;
-
+	$ex_libs.=' gdi32.lib advapi32.lib user32.lib';
+	$ex_libs.=' bufferoverflowu.lib' if ($FLAVOR =~ /WIN64/ and `cl 2>&1` =~ /14\.00\.4[0-9]{4}\./);
 	}
 
 # As native NT API is pure UNICODE, our WIN-NT build defaults to UNICODE,
@@ -181,7 +160,7 @@ if ($FLAVOR =~ /NT/)
 	$ex_libs="unicows.lib $ex_libs";
 	}
 # static library stuff
-$mklib='lib /nologo';
+$mklib='lib';
 $ranlib='';
 $plib="";
 $libp=".lib";
@@ -191,17 +170,14 @@ $lfile='/out:';
 $shlib_ex_obj="";
 $app_ex_obj="setargv.obj" if ($FLAVOR !~ /CE/);
 if ($nasm) {
-	my $ver=`nasm -v 2>NUL`;
-	my $vew=`nasmw -v 2>NUL`;
-	# pick newest version
-	$asm=($ver gt $vew?"nasm":"nasmw")." -f win32";
+	$asm='nasmw -f win32';
 	$afile='-o ';
 } elsif ($ml64) {
 	$asm='ml64 /c /Cp /Cx';
 	$asm.=' /Zi' if $debug;
 	$afile='/Fo';
 } else {
-	$asm='ml /nologo /Cp /coff /c /Cx';
+	$asm='ml /Cp /coff /c /Cx';
 	$asm.=" /Zi" if $debug;
 	$afile='/Fo';
 }
@@ -355,11 +331,7 @@ sub do_lib_rule
 
 		if ($name eq "")
 			{
-			$ex.= $oflow;
-			if ($target =~ /capi/)
-				{
-				$ex.=' crypt32.lib advapi32.lib';
-				}
+			$ex_libs.=' bufferoverflowu.lib' if ($FLAVOR =~ /WIN64/ and `cl 2>&1` =~ /14\.00\.4[0-9]{4}\./);
 			}
 		elsif ($FLAVOR =~ /CE/)
 			{
@@ -369,8 +341,7 @@ sub do_lib_rule
 			{
 			$ex.=' unicows.lib' if ($FLAVOR =~ /NT/);
 			$ex.=' wsock32.lib gdi32.lib advapi32.lib user32.lib';
-			$ex.=' crypt32.lib';
-			$ex.= $oflow;
+			$ex_libs.=' bufferoverflowu.lib' if ($FLAVOR =~ /WIN64/ and `cl 2>&1` =~ /14\.00\.4[0-9]{4}\./);
 			}
 		$ex.=" $zlib_lib" if $zlib_opt == 1 && $target =~ /O_CRYPTO/;
 
@@ -422,7 +393,7 @@ sub do_link_rule
 	if ($standalone == 1)
 		{
 		$ret.="  \$(LINK) \$(LFLAGS) $efile$target @<<\n\t";
-		$ret.= "\$(EX_LIBS) " if ($files =~ /O_FIPSCANISTER/ && !$fipscanisterbuild);
+		$ret.= "$mwex advapi32.lib " if ($files =~ /O_FIPSCANISTER/ && !$fipscanisterbuild);
 		$ret.="$files $libs\n<<\n";
 		}
 	elsif ($standalone == 2)

@@ -63,10 +63,10 @@
 #include <errno.h>
 #include <assert.h>
 #include <ctype.h>
+
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-#include <openssl/bn.h>
-
+#include <openssl/fips.h>
 #include <openssl/err.h>
 #include "e_os.h"
 
@@ -80,7 +80,6 @@ int main(int argc, char *argv[])
 
 #else
 
-#include <openssl/fips.h>
 #include "fips_utl.h"
 
 #define AES_BLOCK_SIZE 16
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
 
 /*-----------------------------------------------*/
 
-static int AESTest(EVP_CIPHER_CTX *ctx,
+int AESTest(EVP_CIPHER_CTX *ctx,
 	    char *amode, int akeysz, unsigned char *aKey, 
 	    unsigned char *iVec, 
 	    int dir,  /* 0 = decrypt, 1 = encrypt */
@@ -213,8 +212,6 @@ static int AESTest(EVP_CIPHER_CTX *ctx,
 	}
     if (EVP_CipherInit_ex(ctx, cipher, NULL, aKey, iVec, dir) <= 0)
 	return 0;
-    if(!strcasecmp(amode,"CFB1"))
-	M_EVP_CIPHER_CTX_set_flags(ctx, EVP_CIPH_FLAG_LENGTH_BITS);
     if (dir)
 		EVP_Cipher(ctx, ciphertext, plaintext, len);
 	else
@@ -238,7 +235,7 @@ enum XCrypt {XDECRYPT, XENCRYPT};
 #define gb(a,b) (((a)[(b)/8] >> (7-(b)%8))&1)
 #define sb(a,b,v) ((a)[(b)/8]=((a)[(b)/8]&~(1 << (7-(b)%8)))|(!!(v) << (7-(b)%8)))
 
-static int do_mct(char *amode, 
+int do_mct(char *amode, 
 	   int akeysz, unsigned char *aKey,unsigned char *iVec,
 	   int dir, unsigned char *text, int len,
 	   FILE *rfp)
@@ -380,11 +377,9 @@ static int do_mct(char *amode,
 	    case CFB1:
 		if(j == 0)
 		    {
-#if 0
 		    /* compensate for wrong endianness of input file */
 		    if(i == 0)
 			ptext[0][0]<<=7;
-#endif
 		    ret = AESTest(&ctx,amode,akeysz,key[i],iv[i],dir,
 				ptext[j], ctext[j], len);
 		    }
@@ -546,7 +541,7 @@ static int do_mct(char *amode,
   # Fri Aug 30 04:07:22 PM
   ----------------------------*/
 
-static int proc_file(char *rqfile, char *rspfile)
+int proc_file(char *rqfile, char *rspfile)
     {
     char afn[256], rfn[256];
     FILE *afp = NULL, *rfp = NULL;
@@ -767,7 +762,7 @@ static int proc_file(char *rqfile, char *rspfile)
 		    err =1;
 		    break;
 		    }
-		if (len >= (int)sizeof(plaintext))
+		if (len >= sizeof(plaintext))
 		    {
 		    printf("Buffer overflow\n");
 		    }

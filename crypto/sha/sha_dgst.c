@@ -58,10 +58,7 @@
 
 #include <openssl/opensslconf.h>
 #include <openssl/crypto.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #include <openssl/err.h>
 #if !defined(OPENSSL_NO_SHA0) && !defined(OPENSSL_NO_SHA)
 

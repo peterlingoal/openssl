@@ -12,10 +12,7 @@
 
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #include <openssl/opensslv.h>
 
 const char SHA256_version[]="SHA-256" OPENSSL_VERSION_PTEXT;
@@ -94,21 +91,21 @@ int SHA224_Final (unsigned char *md, SHA256_CTX *c)
  */
 #define	HASH_MAKE_STRING(c,s)	do {	\
 	unsigned long ll;		\
-	unsigned int  xn;		\
+	unsigned int  n;		\
 	switch ((c)->md_len)		\
 	{   case SHA224_DIGEST_LENGTH:	\
-		for (xn=0;xn<SHA224_DIGEST_LENGTH/4;xn++)	\
-		{   ll=(c)->h[xn]; HOST_l2c(ll,(s));   }	\
+		for (n=0;n<SHA224_DIGEST_LENGTH/4;n++)	\
+		{   ll=(c)->h[n]; HOST_l2c(ll,(s));   }	\
 		break;			\
 	    case SHA256_DIGEST_LENGTH:	\
-		for (xn=0;xn<SHA256_DIGEST_LENGTH/4;xn++)	\
-		{   ll=(c)->h[xn]; HOST_l2c(ll,(s));   }	\
+		for (n=0;n<SHA256_DIGEST_LENGTH/4;n++)	\
+		{   ll=(c)->h[n]; HOST_l2c(ll,(s));   }	\
 		break;			\
 	    default:			\
 		if ((c)->md_len > SHA256_DIGEST_LENGTH)	\
 		    return 0;				\
-		for (xn=0;xn<(c)->md_len/4;xn++)		\
-		{   ll=(c)->h[xn]; HOST_l2c(ll,(s));   }	\
+		for (n=0;n<(c)->md_len/4;n++)		\
+		{   ll=(c)->h[n]; HOST_l2c(ll,(s));   }	\
 		break;			\
 	}				\
 	} while (0)

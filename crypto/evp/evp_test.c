@@ -220,18 +220,18 @@ static void test1(const EVP_CIPHER *c,const unsigned char *key,int kn,
 	    test1_exit(7);
 	    }
 
-	if(outl+outl2 != pn)
+	if(outl+outl2 != cn)
 	    {
 	    fprintf(stderr,"Plaintext length mismatch got %d expected %d\n",
-		    outl+outl2,pn);
+		    outl+outl2,cn);
 	    test1_exit(8);
 	    }
 
-	if(memcmp(out,plaintext,pn))
+	if(memcmp(out,plaintext,cn))
 	    {
 	    fprintf(stderr,"Plaintext mismatch\n");
-	    hexdump(stderr,"Got",out,pn);
-	    hexdump(stderr,"Expected",plaintext,pn);
+	    hexdump(stderr,"Got",out,cn);
+	    hexdump(stderr,"Expected",plaintext,cn);
 	    test1_exit(9);
 	    }
 	}

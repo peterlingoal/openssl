@@ -58,10 +58,7 @@
 
 #include <openssl/crypto.h>
 #include <openssl/rc5.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #include "rc5_locl.h"
 
 #ifdef OPENSSL_FIPS

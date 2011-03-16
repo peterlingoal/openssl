@@ -22,6 +22,7 @@ CFLAGS= $(INCLUDES) $(CFLAG)
 
 GENERAL=Makefile
 TEST=fips_aesavs.c
+TESTDATA=fips_aes_data
 APPS=
 
 LIB=$(TOP)/libcrypto.a
@@ -49,6 +50,7 @@ files:
 links:
 	@$(PERL) $(TOP)/util/mklink.pl $(TOP)/include/openssl $(EXHEADER)
 	@$(PERL) $(TOP)/util/mklink.pl $(TOP)/test $(TEST)
+	@$(PERL) $(TOP)/util/mklink.pl $(TOP)/test $(TESTDATA)
 	@$(PERL) $(TOP)/util/mklink.pl $(TOP)/apps $(APPS)
 
 install:
@@ -99,11 +101,10 @@ fips_aes_selftest.o: ../../include/openssl/stack.h
 fips_aes_selftest.o: ../../include/openssl/symhacks.h fips_aes_selftest.c
 fips_aesavs.o: ../../e_os.h ../../include/openssl/aes.h
 fips_aesavs.o: ../../include/openssl/asn1.h ../../include/openssl/bio.h
-fips_aesavs.o: ../../include/openssl/bn.h ../../include/openssl/crypto.h
-fips_aesavs.o: ../../include/openssl/e_os2.h ../../include/openssl/err.h
-fips_aesavs.o: ../../include/openssl/evp.h ../../include/openssl/fips.h
-fips_aesavs.o: ../../include/openssl/lhash.h ../../include/openssl/obj_mac.h
-fips_aesavs.o: ../../include/openssl/objects.h
+fips_aesavs.o: ../../include/openssl/crypto.h ../../include/openssl/e_os2.h
+fips_aesavs.o: ../../include/openssl/err.h ../../include/openssl/evp.h
+fips_aesavs.o: ../../include/openssl/fips.h ../../include/openssl/lhash.h
+fips_aesavs.o: ../../include/openssl/obj_mac.h ../../include/openssl/objects.h
 fips_aesavs.o: ../../include/openssl/opensslconf.h
 fips_aesavs.o: ../../include/openssl/opensslv.h
 fips_aesavs.o: ../../include/openssl/ossl_typ.h

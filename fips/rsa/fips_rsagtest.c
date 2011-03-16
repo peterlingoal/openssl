@@ -1,5 +1,5 @@
 /* fips_rsagtest.c */
-/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
+/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2005.
  */
 /* ====================================================================
@@ -63,7 +63,6 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/err.h>
-#include <openssl/bn.h>
 #include <openssl/x509v3.h>
 
 #ifndef OPENSSL_FIPS
@@ -76,7 +75,6 @@ int main(int argc, char *argv[])
 
 #else
 
-#include <openssl/rsa.h>
 #include "fips_utl.h"
 
 int rsa_test(FILE *out, FILE *in);

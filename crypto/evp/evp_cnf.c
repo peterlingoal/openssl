@@ -1,5 +1,5 @@
 /* evp_cnf.c */
-/* Written by Stephen Henson (steve@openssl.org) for the OpenSSL
+/* Written by Stephen Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2007.
  */
 /* ====================================================================
@@ -64,10 +64,7 @@
 #include <openssl/dso.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 
 /* Algorithm configuration module. */
 
@@ -97,7 +94,7 @@ static int alg_module_init(CONF_IMODULE *md, const CONF *cnf)
 			if (m > 0)
 				{
 #ifdef OPENSSL_FIPS
-				if (!FIPS_mode() && !FIPS_mode_set(1))
+				if (!FIPS_mode_set(1))
 					{
 					EVPerr(EVP_F_ALG_MODULE_INIT, EVP_R_ERROR_SETTING_FIPS_MODE);
 					return 0;

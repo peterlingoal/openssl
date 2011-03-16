@@ -137,12 +137,7 @@ int RSA_sign(int type, const unsigned char *m, unsigned int m_len,
 		i2d_X509_SIG(&sig,&p);
 		s=tmps;
 	}
-#ifdef OPENSSL_FIPS
-	/* Bypass algorithm blocking: this is allowed if we get this far */
-	i=rsa->meth->rsa_priv_enc(i,s,sigret,rsa,RSA_PKCS1_PADDING);
-#else
 	i=RSA_private_encrypt(i,s,sigret,rsa,RSA_PKCS1_PADDING);
-#endif
 	if (i <= 0)
 		ret=0;
 	else
@@ -195,11 +190,8 @@ int RSA_verify(int dtype, const unsigned char *m, unsigned int m_len,
 		RSAerr(RSA_F_RSA_VERIFY, RSA_R_OPERATION_NOT_ALLOWED_IN_FIPS_MODE);
 		return 0;
 		}
-	/* Bypass algorithm blocking: this is allowed */
-	i=rsa->meth->rsa_pub_dec((int)siglen,sigbuf,s,rsa,RSA_PKCS1_PADDING);
-#else
-	i=RSA_public_decrypt((int)siglen,sigbuf,s,rsa,RSA_PKCS1_PADDING);
 #endif
+	i=RSA_public_decrypt((int)siglen,sigbuf,s,rsa,RSA_PKCS1_PADDING);
 
 	if (i <= 0) goto err;
 

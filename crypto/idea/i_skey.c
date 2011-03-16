@@ -58,10 +58,7 @@
 
 #include <openssl/idea.h>
 #include <openssl/crypto.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #include "idea_lcl.h"
 
 static IDEA_INT inverse(unsigned int xin);

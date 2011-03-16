@@ -303,12 +303,7 @@ struct bn_mont_ctx_st
 	BIGNUM N;      /* The modulus */
 	BIGNUM Ni;     /* R*(1/R mod N) - N*Ni = 1
 	                * (Ni is only stored for bignum algorithm) */
-#if 0
-	/* OpenSSL 0.9.9 preview: */
-	BN_ULONG n0[2];/* least significant word(s) of Ni */
-#else
 	BN_ULONG n0;   /* least significant word of Ni */
-#endif
 	int flags;
 	};
 
@@ -408,8 +403,8 @@ BIGNUM *BN_CTX_get(BN_CTX *ctx);
 void	BN_CTX_end(BN_CTX *ctx);
 int     BN_rand(BIGNUM *rnd, int bits, int top,int bottom);
 int     BN_pseudo_rand(BIGNUM *rnd, int bits, int top,int bottom);
-int	BN_rand_range(BIGNUM *rnd, const BIGNUM *range);
-int	BN_pseudo_rand_range(BIGNUM *rnd, const BIGNUM *range);
+int	BN_rand_range(BIGNUM *rnd, BIGNUM *range);
+int	BN_pseudo_rand_range(BIGNUM *rnd, BIGNUM *range);
 int	BN_num_bits(const BIGNUM *a);
 int	BN_num_bits_word(BN_ULONG);
 BIGNUM *BN_new(void);
@@ -531,7 +526,16 @@ int	BN_is_prime_ex(const BIGNUM *p,int nchecks, BN_CTX *ctx, BN_GENCB *cb);
 int	BN_is_prime_fasttest_ex(const BIGNUM *p,int nchecks, BN_CTX *ctx,
 		int do_trial_division, BN_GENCB *cb);
 
+int BN_X931_derive_prime(BIGNUM *p, BIGNUM *p1, BIGNUM *p2,
+			void (*cb)(int, int, void *), void *cb_arg,
+			const BIGNUM *Xp, const BIGNUM *Xp1, const BIGNUM *Xp2,
+			const BIGNUM *e, BN_CTX *ctx);
 int BN_X931_generate_Xpq(BIGNUM *Xp, BIGNUM *Xq, int nbits, BN_CTX *ctx);
+int BN_X931_generate_prime(BIGNUM *p, BIGNUM *p1, BIGNUM *p2,
+			BIGNUM *Xp1, BIGNUM *Xp2,
+			const BIGNUM *Xp,
+			const BIGNUM *e, BN_CTX *ctx,
+			void (*cb)(int, int, void *), void *cb_arg);
 
 int BN_X931_derive_prime_ex(BIGNUM *p, BIGNUM *p1, BIGNUM *p2,
 			const BIGNUM *Xp, const BIGNUM *Xp1, const BIGNUM *Xp2,

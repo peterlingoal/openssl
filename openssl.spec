@@ -1,8 +1,7 @@
-%define _unpackaged_files_terminate_build 0
 %define libmaj 0
 %define libmin 9
 %define librel 8
-%define librev q
+%define librev f
 Release: 1
 
 %define openssldir /var/ssl
@@ -96,9 +95,6 @@ perl util/perlpath.pl /usr/bin/perl
 %endif
 %ifarch alpha
 ./Configure %{CONFIG_FLAGS} linux-alpha shared
-%endif
-%ifarch x86_64
-./Configure %{CONFIG_FLAGS} linux-x86_64 shared
 %endif
 LD_LIBRARY_PATH=`pwd` make
 LD_LIBRARY_PATH=`pwd` make rehash

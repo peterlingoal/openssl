@@ -58,10 +58,7 @@
 
 #include <openssl/cast.h>
 #include <openssl/crypto.h>
-#ifdef OPENSSL_FIPS
 #include <openssl/fips.h>
-#endif
-
 #include "cast_lcl.h"
 #include "cast_s.h"
 

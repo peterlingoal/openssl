@@ -241,11 +241,11 @@
 #ifndef PEDANTIC
 # if defined(__GNUC__) && __GNUC__>=2 && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_NO_INLINE_ASM)
 #  if defined(__s390x__)
-#   define HOST_c2l(c,l)	({ asm ("lrv	%0,%1"			\
-				   :"=d"(l) :"m"(*(const unsigned int *)(c)));\
+#   define HOST_c2l(c,l)	({ asm ("lrv	%0,0(%1)"		\
+					:"=r"(l) : "r"(c));		\
 				   (c)+=4; (l);				})
-#   define HOST_l2c(l,c)	({ asm ("strv	%1,%0"			\
-				   :"=m"(*(unsigned int *)(c)) :"d"(l));\
+#   define HOST_l2c(l,c)	({ asm ("strv	%0,0(%1)"		\
+					: : "r"(l),"r"(c) : "memory");	\
 				   (c)+=4; (l);				})
 #  endif
 # endif
@@ -301,7 +301,7 @@ int HASH_UPDATE (HASH_CTX *c, const void *data_, size_t len)
 		{
 		p=(unsigned char *)c->data;
 
-		if (len >= HASH_CBLOCK || len+n >= HASH_CBLOCK)
+		if ((n+len) >= HASH_CBLOCK)
 			{
 			memcpy (p+n,data,HASH_CBLOCK-n);
 			HASH_BLOCK_DATA_ORDER (c,p,1);

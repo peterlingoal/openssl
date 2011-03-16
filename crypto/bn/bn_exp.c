@@ -134,8 +134,7 @@ int BN_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 		rr = BN_CTX_get(ctx);
 	else
 		rr = r;
-	v = BN_CTX_get(ctx);
-	if (rr == NULL || v == NULL) goto err;
+	if ((v = BN_CTX_get(ctx)) == NULL) goto err;
 
 	if (BN_copy(v,a) == NULL) goto err;
 	bits=BN_num_bits(p);

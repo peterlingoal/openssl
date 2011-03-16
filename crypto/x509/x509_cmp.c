@@ -288,8 +288,7 @@ int X509_NAME_cmp(const X509_NAME *a, const X509_NAME *b)
 			if (!(nabit & STR_TYPE_CMP) ||
 				!(nbbit & STR_TYPE_CMP))
 				return j;
-			if (!asn1_string_memcmp(na->value, nb->value))
-				j = 0;
+			j = asn1_string_memcmp(na->value, nb->value);
 			}
 		else if (na->value->type == V_ASN1_PRINTABLESTRING)
 			j=nocase_spacenorm_cmp(na->value, nb->value);

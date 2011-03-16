@@ -115,10 +115,7 @@
  */
 #include <stdio.h>
 #include <openssl/objects.h>
-#ifndef OPENSSL_NO_COMP
 #include <openssl/comp.h>
-#endif
-
 #include "ssl_locl.h"
 
 #define SSL_ENC_DES_IDX		0
@@ -777,7 +774,7 @@ static int ssl_cipher_process_rulestr(const char *rule_str,
 		CIPHER_ORDER **tail_p, SSL_CIPHER **ca_list)
 	{
 	unsigned long algorithms, mask, algo_strength, mask_strength;
-	const char *l, *buf;
+	const char *l, *start, *buf;
 	int j, multi, found, rule, retval, ok, buflen;
 	unsigned long cipher_id = 0, ssl_version = 0;
 	char ch;
@@ -809,6 +806,7 @@ static int ssl_cipher_process_rulestr(const char *rule_str,
 
 		algorithms = mask = algo_strength = mask_strength = 0;
 
+		start=l;
 		for (;;)
 			{
 			ch = *l;
@@ -1090,16 +1088,15 @@ STACK_OF(SSL_CIPHER) *ssl_create_cipher_list(const SSL_METHOD *ssl_method,
 	*cipher_list_by_id = tmp_cipher_list;
 	(void)sk_SSL_CIPHER_set_cmp_func(*cipher_list_by_id,ssl_cipher_ptr_id_cmp);
 
-	sk_SSL_CIPHER_sort(*cipher_list_by_id);
 	return(cipherstack);
 	}
 
-char *SSL_CIPHER_description(const SSL_CIPHER *cipher, char *buf, int len)
+char *SSL_CIPHER_description(SSL_CIPHER *cipher, char *buf, int len)
 	{
 	int is_export,pkl,kl;
 	const char *ver,*exp_str;
 	const char *kx,*au,*enc,*mac;
-	unsigned long alg,alg2;
+	unsigned long alg,alg2,alg_s;
 #ifdef KSSL_DEBUG
 	static const char *format="%-23s %s Kx=%-8s Au=%-4s Enc=%-9s Mac=%-4s%s AL=%lx\n";
 #else
@@ -1107,6 +1104,7 @@ char *SSL_CIPHER_description(const SSL_CIPHER *cipher, char *buf, int len)
 #endif /* KSSL_DEBUG */
 
 	alg=cipher->algorithms;
+	alg_s=cipher->algo_strength;
 	alg2=cipher->algorithm2;
 
 	is_export=SSL_C_IS_EXPORT(cipher);
@@ -1354,7 +1352,7 @@ int SSL_COMP_add_compression_method(int id, COMP_METHOD *cm)
 	comp->method=cm;
 	load_builtin_compressions();
 	if (ssl_comp_methods
-		&& sk_SSL_COMP_find(ssl_comp_methods,comp) >= 0)
+		&& !sk_SSL_COMP_find(ssl_comp_methods,comp))
 		{
 		OPENSSL_free(comp);
 		MemCheck_on();

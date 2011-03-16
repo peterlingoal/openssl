@@ -378,8 +378,6 @@ struct evp_cipher_st
 #define		EVP_CIPH_FLAG_NON_FIPS_ALLOW	0x800
 /* Allow use default ASN1 get/set iv */
 #define		EVP_CIPH_FLAG_DEFAULT_ASN1	0x1000
-/* Buffer length in bits not bytes: CFB1 mode only */
-#define		EVP_CIPH_FLAG_LENGTH_BITS	0x2000
 
 /* ctrl() values */
 
@@ -472,7 +470,6 @@ typedef int (EVP_PBE_KEYGEN)(EVP_CIPHER_CTX *ctx, const char *pass, int passlen,
 #define M_EVP_MD_CTX_type(e)		M_EVP_MD_type(M_EVP_MD_CTX_md(e))
 #define M_EVP_MD_CTX_md(e)			((e)->digest)
 
-#define M_EVP_CIPHER_CTX_set_flags(ctx,flgs) ((ctx)->flags|=(flgs))
 
 int EVP_MD_type(const EVP_MD *md);
 #define EVP_MD_nid(e)			EVP_MD_type(e)
@@ -1039,6 +1036,7 @@ void ERR_load_EVP_strings(void);
 #define EVP_R_NO_VERIFY_FUNCTION_CONFIGURED		 105
 #define EVP_R_PKCS8_UNKNOWN_BROKEN_TYPE			 117
 #define EVP_R_PUBLIC_KEY_NOT_RSA			 106
+#define EVP_R_SEED_KEY_SETUP_FAILED			 162
 #define EVP_R_UNKNOWN_OPTION				 149
 #define EVP_R_UNKNOWN_PBE_ALGORITHM			 121
 #define EVP_R_UNSUPORTED_NUMBER_OF_ROUNDS		 135
@@ -1051,7 +1049,6 @@ void ERR_load_EVP_strings(void);
 #define EVP_R_UNSUPPORTED_SALT_TYPE			 126
 #define EVP_R_WRONG_FINAL_BLOCK_LENGTH			 109
 #define EVP_R_WRONG_PUBLIC_KEY_TYPE			 110
-#define EVP_R_SEED_KEY_SETUP_FAILED			 162
 
 #ifdef  __cplusplus
 }
